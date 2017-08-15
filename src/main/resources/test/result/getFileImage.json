@@ -1,0 +1,18 @@
+{
+  "data":{
+    "id":"/sample.jpg",
+    "type":"file",
+    "attributes":{
+      "name":"sample.jpg",
+      "path":"userfiles/sample.jpg",
+      "readable":1,
+      "writable":1,
+      "created":"",
+      "modified":"31 Jul 2017 07:38",
+      "timestamp":1501486695,
+      "height":162,
+      "width":200,
+      "size": 6082
+    }
+  }
+}
