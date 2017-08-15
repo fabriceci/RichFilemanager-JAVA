@@ -274,11 +274,9 @@ public class LocalFileManager extends AbstractFileManager {
             if (thumbnailFile.exists()) {
                 if (thumbnailFile.isFile()) {
                     File newThumbnailFile = new File(getThumbnailPath(targetPath + filename));
-                    if (newThumbnailFile.getParentFile().mkdirs()) {
-                        Files.move(thumbnailFile.toPath(), newThumbnailFile.toPath());
-                    } else {
-                        thumbnailFile.delete();
-                    }
+                    Files.createDirectories(newThumbnailFile.getParentFile().toPath());
+                    Files.move(thumbnailFile.toPath(), newThumbnailFile.toPath());
+
                 } else {
                     FileUtils.removeDirectory(thumbnailFile.toPath());
                 }
@@ -342,9 +340,7 @@ public class LocalFileManager extends AbstractFileManager {
         }
 
         try {
-            if (!thumbnailFile.mkdirs()) {
-                Files.createDirectories(thumbnailFile.getParentFile().toPath());
-            }
+            Files.createDirectories(thumbnailFile.getParentFile().toPath());
 
             BufferedImage source = ImageIO.read(originalFile);
             BufferedImage resizedImage = generateThumbnail(source);
