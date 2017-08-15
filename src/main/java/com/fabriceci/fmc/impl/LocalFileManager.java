@@ -280,38 +280,24 @@ public class LocalFileManager extends AbstractFileManager {
         return getFileInfo(finalPath);
     }
 
-    /*
     @Override
     public FileData actionDelete(String path) throws FileManagerException {
 
         File thumbnail = new File(getThumbnailPath(path));
         File file = new File(docRoot.getPath() + path);
 
-        if (readOnly) {
+        checkPath(file);
+        checkWritePermission(file);
+        checkRestrictions(path, file.isDirectory());
+
+        // check if not requesting main FM userfiles folder
+        if (file.equals(docRoot)) {
             throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED);
         }
 
-        if (!file.exists()) {
-            return new FileManagerException("INVALID_DIRECTORY_OR_FILE");
-        }
-
-        // check system permission
-        if (!file.canRead() && !file.canWrite()) {
-            throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED_SYSTEM);
-        }
-
-
-
-        if (!file.canWrite()) {
-            return getErrorResponse("NOT_ALLOWED_SYSTEM");
-        }
-
-        if (file.equals(docRoot)) {
-            return getErrorResponse("NOT_ALLOWED");
-        }
-
         // Recover the result before the operation
-        JSONObject result = new JSONObject().put("data", new JSONObject(getFileInfo(path)));
+        FileData result = getFileInfo(path);
+
         if (file.isDirectory()) {
             try {
                 FileUtils.removeDirectory(file.toPath());
@@ -319,18 +305,18 @@ public class LocalFileManager extends AbstractFileManager {
                     FileUtils.removeDirectory(thumbnail.toPath());
                 }
             } catch (IOException e) {
-                throw new FMIOException("Error during removing directory: " + file.getName(), e);
+                logger.error("Cannot remove directory : " + path);
+                throw new FileManagerException(ClientErrorMessage.ERROR_SERVER);
             }
         } else {
             if (!file.delete()) {
-                return getErrorResponse(String.format("ERROR_SERVER", path));
+                throw new FileManagerException(ClientErrorMessage.ERROR_SERVER);
             }
             if (thumbnail.exists()) thumbnail.delete();
         }
-
         return result;
     }
-*/
+
 
     private String getDynamicPath(String path) {
         String fileRoot = propertiesConfig.getProperty("fileRoot");

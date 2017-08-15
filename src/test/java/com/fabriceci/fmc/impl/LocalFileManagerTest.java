@@ -225,7 +225,6 @@ public class LocalFileManagerTest {
         assertEquals(jsonExpectation, jsonResult);
     }
 
-
     @Test
     public void actionAddFolderTest() throws IOException, FMInitializationException {
         final LocalFileManager localFileManager = initFileManager();
@@ -284,7 +283,7 @@ public class LocalFileManagerTest {
         final String temporaryFolderPath = temporaryFolder.getRoot().getAbsolutePath() + '/' + FILE_ROOT;
 
         final String movedDirName = "movedDir";
-        final String movedDirPath = temporaryFolder.getRoot().getAbsolutePath() + '/' + FILE_ROOT + "/" + movedDirName;
+        final String movedDirPath = temporaryFolderPath + "/" + movedDirName;
         File movedDirFile = new File(movedDirPath);
         Files.createDirectory(movedDirFile.toPath());
 
@@ -331,14 +330,10 @@ public class LocalFileManagerTest {
         JsonElement jsonActual = parser.parse(new String(Files.readAllBytes(Paths.get(outputFilePath))));
 
         // check if the method return the good file info
-        FileData folderInfo = null;
-        try {
-            folderInfo = localFileManager.getFileInfo("/" + movedDirName + "/" + sampleImageFile.getName());
-        } catch (FileManagerException ignore) {
-        }
+        FileData sampleInfo = localFileManager.getFileInfo("/" + movedDirName + "/" + sampleImageFile.getName());
 
         Gson gson = new Gson();
-        JsonElement jsonExpected = parser.parse(gson.toJson(new SuccessResponse(folderInfo)));
+        JsonElement jsonExpected = parser.parse(gson.toJson(new SuccessResponse(sampleInfo)));
 
         assertEquals(jsonExpected, jsonActual);
 
@@ -355,6 +350,102 @@ public class LocalFileManagerTest {
 
         JsonElement parse = parser.parse(new String(Files.readAllBytes(Paths.get(outputFilePath))));
         assertTrue(parse.toString().contains(ClientErrorMessage.NOT_ALLOWED));
+    }
+
+    @Test
+    public void actionDeleteTest() throws IOException, FileManagerException {
+        final LocalFileManager localFileManager = initFileManager();
+        final String temporaryFolderPath = temporaryFolder.getRoot().getAbsolutePath() + '/' + FILE_ROOT;
+
+        final String toBeDeleteDirName = "deleteMe";
+        final String toBeDeleteDirPath = temporaryFolderPath + "/" + toBeDeleteDirName;
+
+        File toBeDeleteFile = new File(toBeDeleteDirPath);
+        Files.createDirectory(toBeDeleteFile.toPath());
+
+        assertTrue(toBeDeleteFile.exists());
+
+        PrintWriter writer = new PrintWriter(outputFilePath);
+
+        // mock the request
+        HttpServletRequest req = mock(HttpServletRequest.class);
+        HttpServletResponse resp = mock(HttpServletResponse.class);
+
+        // Add the sample data
+        File sampleImageTemp = new File(temporaryFolderPath + '/' + sampleImageFile.getName());
+        File sampleImageTemp2 = new File(toBeDeleteDirPath + '/' + sampleImageFile.getName());
+        File sampleImageTemp3 = new File(temporaryFolderPath + '/' + "foo.jpg");
+        Files.copy(sampleImageFile.toPath(), sampleImageTemp.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(sampleImageFile.toPath(), sampleImageTemp2.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(sampleImageFile.toPath(), sampleImageTemp3.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+        try {
+            // create a thumbnail
+            localFileManager.getThumbnail("/" + sampleImageFile.getName(), true);
+            localFileManager.getThumbnail( '/' + toBeDeleteDirName  + '/' + sampleImageFile.getName(), true);
+        } catch (FileManagerException ignore) {
+            fail();
+        }
+
+        File thumbnail1 = new File(localFileManager.getThumbnailPath("/" + sampleImageFile.getName()));
+        File thumbnail2 = new File(localFileManager.getThumbnailPath("/" + toBeDeleteDirName + "/" + sampleImageFile.getName()));
+
+        assertTrue(sampleImageTemp.exists());
+        assertTrue(sampleImageTemp2.exists());
+        assertTrue(thumbnail1.exists());
+        assertTrue(thumbnail2.exists());
+
+        // test delete a file
+        FileData fileInfo = localFileManager.getFileInfo("/" + sampleImageFile.getName());
+        given(resp.getWriter()).willReturn(writer);
+        given(req.getParameter(PARAM_MODE)).willReturn("delete");
+        given(req.getParameter(PARAM_PATH)).willReturn("/" + sampleImageFile.getName());
+        given(req.getMethod()).willReturn("GET");
+        localFileManager.handleRequest(req, resp);
+        writer.flush();
+
+        assertFalse(sampleImageTemp.exists());
+        assertTrue(sampleImageTemp2.exists());
+        assertFalse(thumbnail1.exists());
+        assertTrue(thumbnail2.exists());
+
+        JsonElement jsonActual = parser.parse(new String(Files.readAllBytes(Paths.get(outputFilePath))));
+
+        Gson gson = new Gson();
+        JsonElement jsonExpected = parser.parse(gson.toJson(new SuccessResponse(fileInfo)));
+
+        // check the response
+        assertEquals(jsonExpected, jsonActual);
+
+        // test delete a folder
+        writer = new PrintWriter(outputFilePath);
+        given(resp.getWriter()).willReturn(writer);
+        given(resp.getWriter()).willReturn(writer);
+        given(req.getParameter(PARAM_MODE)).willReturn("delete");
+        given(req.getParameter(PARAM_PATH)).willReturn("/" + toBeDeleteDirName + "/");
+        given(req.getMethod()).willReturn("GET");
+        localFileManager.handleRequest(req, resp);
+        writer.flush();
+
+        assertFalse(sampleImageTemp.exists());
+        assertFalse(sampleImageTemp2.exists());
+        assertFalse(thumbnail1.exists());
+        assertFalse(thumbnail2.exists());
+        assertFalse(toBeDeleteFile.exists());
+
+        // security test with readonly
+        Map<String, String> map = new HashMap<>();
+        map.put("readOnly", "true");
+        writer = new PrintWriter(outputFilePath);
+        given(resp.getWriter()).willReturn(writer);
+        given(req.getParameter(PARAM_PATH)).willReturn("/" + "foo.jpg");
+        final LocalFileManager localFileManagerReadOnly = initFileManager(map, false);
+        localFileManagerReadOnly.handleRequest(req, resp);
+        writer.flush();
+
+        JsonElement parse = parser.parse(new String(Files.readAllBytes(Paths.get(outputFilePath))));
+        assertTrue(parse.toString().contains(ClientErrorMessage.NOT_ALLOWED));
+
     }
 
     /**

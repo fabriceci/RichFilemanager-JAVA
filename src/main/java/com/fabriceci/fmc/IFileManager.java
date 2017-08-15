@@ -26,7 +26,7 @@ public interface IFileManager {
 
     FileData actionAddFolder(String path, String name) throws FileManagerException;
 
-    FileData actionDelete(HttpServletRequest request) throws FileManagerException;
+    FileData actionDelete(String path) throws FileManagerException;
 
     FileData actionRename(HttpServletRequest request) throws FileManagerException;
 

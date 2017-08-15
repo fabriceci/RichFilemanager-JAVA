@@ -153,6 +153,11 @@ public abstract class AbstractFileManager implements IFileManager {
                             responseData = actionMove(sourcePath, targetPath);
                         }
                         break;
+                    case "delete":
+                        if (!StringUtils.isEmpty(pathParam)) {
+                            responseData = actionDelete(pathParam);
+                        }
+                        break;
                 }
             }
 
@@ -215,7 +220,7 @@ public abstract class AbstractFileManager implements IFileManager {
     }
 
     @Override
-    public FileData actionDelete(HttpServletRequest request) throws FileManagerException {
+    public FileData actionDelete(String path) throws FileManagerException {
         throw new UnsupportedOperationException();
     }
 
