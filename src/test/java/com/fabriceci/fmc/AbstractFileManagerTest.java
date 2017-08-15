@@ -15,7 +15,6 @@ import static org.junit.Assert.assertTrue;
 
 public class AbstractFileManagerTest {
 
-
     private Properties propertiesConfig = new Properties();
     private AbstractFileManager abstractFileManager;
 
@@ -23,15 +22,15 @@ public class AbstractFileManagerTest {
     public void initialize() throws FMInitializationException, IOException {
         abstractFileManager = Mockito.mock(AbstractFileManager.class, Mockito.CALLS_REAL_METHODS);
         propertiesConfig.setProperty("images.extensions", "jpg,jpe,jpeg,gif,png,svg,bmp");
-        propertiesConfig.setProperty("extensions.restrictions" ,",jpg,jpe,jpeg,gif,png,svg,txt,pdf,odp,ods,odt,rtf,doc,docx,xls,xlsx,ppt,pptx,csv,ogv,avi,mkv,mp4,webm,m4v,ogg,mp3,wav,zip,md");
-        propertiesConfig.setProperty("patterns.restrictions.file",".htaccess,web.config,.DS_Store");
-        propertiesConfig.setProperty("patterns.restrictions.folder","_thumbs,.CDN_ACCESS_LOGS");
+        propertiesConfig.setProperty("extensions.restrictions", ",jpg,jpe,jpeg,gif,png,svg,txt,pdf,odp,ods,odt,rtf,doc,docx,xls,xlsx,ppt,pptx,csv,ogv,avi,mkv,mp4,webm,m4v,ogg,mp3,wav,zip,md");
+        propertiesConfig.setProperty("patterns.restrictions.file", ".htaccess,web.config,.DS_Store");
+        propertiesConfig.setProperty("patterns.restrictions.folder", "_thumbs,.CDN_ACCESS_LOGS");
 
         abstractFileManager.setPropertiesConfig(propertiesConfig);
     }
 
     @Test
-    public void isAllowedImageExtTest(){
+    public void isAllowedImageExtTest() {
 
         assertTrue(abstractFileManager.isAllowedImageExt("jpg"));
         assertTrue(abstractFileManager.isAllowedImageExt("jpeg"));
@@ -41,7 +40,6 @@ public class AbstractFileManagerTest {
         assertFalse(abstractFileManager.isAllowedImageExt("jpgg"));
         assertFalse(abstractFileManager.isAllowedImageExt("jpge"));
     }
-
 
     @Test
     public void isAllowedFileExtensionTest() {
@@ -77,7 +75,7 @@ public class AbstractFileManagerTest {
     }
 
     @Test
-    public void normalizeTest(){
+    public void normalizeTest() {
 
         propertiesConfig.setProperty("normalizeFilename", "false");
         assertEquals("My folder ê 2", abstractFileManager.normalizeName("My folder ê 2"));

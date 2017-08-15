@@ -38,6 +38,11 @@ public class LocalFileManagerTest {
     private final static String PARAM_PATH = "path";
     private final static String PARAM_MODE = "mode";
     private final static String PARAM_NAME = "name";
+    private final static String PARAM_NEW = "new";
+    private final static String PARAM_OLD = "old";
+
+    private final static String THUMBNAIL_DIR = "_thumbs";
+
     private final static String SAMPLE_IMAGE_PATH = "test/sample/sample.jpg";
     private final static String SAMPLE_TXT_PATH = "test/sample/sample.txt";
     private final static String EXPECTED_RESULT_GET_INITIATE = "test/result/getInitiate.json";
@@ -78,14 +83,15 @@ public class LocalFileManagerTest {
         return initFileManager(null);
     }
 
-    private LocalFileManager initFileManager(Map<String,String> extraOptions) throws IOException, FMInitializationException {
+    private LocalFileManager initFileManager(Map<String, String> extraOptions) throws IOException, FMInitializationException {
         temporaryFolder.delete();
         temporaryFolder.create();
         temporaryFolder.newFolder(FILE_ROOT);
         Map<String, String> options = new HashMap<>();
         options.put("serverRoot", temporaryFolder.getRoot().getAbsolutePath());
         options.put("fileRoot", FILE_ROOT);
-        if(extraOptions!=null) {
+        options.put("images.thumbnail.dir", THUMBNAIL_DIR);
+        if (extraOptions != null) {
             options.putAll(extraOptions);
         }
         return new LocalFileManager(options);
@@ -143,7 +149,7 @@ public class LocalFileManagerTest {
         assertEquals(jsonExpectation, jsonResult);
 
         // test sample image
-        writer= new PrintWriter(outputFilePath);
+        writer = new PrintWriter(outputFilePath);
         given(resp.getWriter()).willReturn(writer);
         given(req.getParameter(PARAM_PATH)).willReturn("/sample.jpg");
         localFileManager.handleRequest(req, resp);
@@ -191,7 +197,7 @@ public class LocalFileManagerTest {
         assertEquals(jsonExpectation, jsonResult);
 
         // test empty folder
-        writer= new PrintWriter(outputFilePath);
+        writer = new PrintWriter(outputFilePath);
         given(resp.getWriter()).willReturn(writer);
         given(req.getParameter(PARAM_PATH)).willReturn("/" + folderEmpty + "/");
         given(req.getMethod()).willReturn("GET");
@@ -203,7 +209,7 @@ public class LocalFileManagerTest {
         assertEquals(jsonExpectation, jsonResult);
 
         // test folder with files
-        writer= new PrintWriter(outputFilePath);
+        writer = new PrintWriter(outputFilePath);
         given(resp.getWriter()).willReturn(writer);
         given(req.getParameter(PARAM_PATH)).willReturn("/" + folderFiles + "/");
         given(req.getMethod()).willReturn("GET");
@@ -243,10 +249,11 @@ public class LocalFileManagerTest {
         JsonElement jsonActual = parser.parse(new String(Files.readAllBytes(Paths.get(outputFilePath))));
 
         // check if the method return the good file info
-        FileData folderInfo= null;
+        FileData folderInfo = null;
         try {
             folderInfo = localFileManager.getFileInfo("/" + newFolderName + "/");
-        } catch (FileManagerException ignore) {}
+        } catch (FileManagerException ignore) {
+        }
 
         Gson gson = new Gson();
         JsonElement jsonExpected = parser.parse(gson.toJson(new SuccessResponse(folderInfo)));
@@ -254,24 +261,102 @@ public class LocalFileManagerTest {
         assertEquals(jsonExpected, jsonActual);
 
         // security test with readonly
-        Map<String,Object> map = new HashMap<>();
+        Map<String, String> map = new HashMap<>();
         map.put("readOnly", "true");
-        writer= new PrintWriter(outputFilePath);
+        writer = new PrintWriter(outputFilePath);
         given(resp.getWriter()).willReturn(writer);
         given(req.getParameter(PARAM_NAME)).willReturn(newFolderName + "2");
-        final LocalFileManager localFileManagerReadOnly = initFileManager();
+        final LocalFileManager localFileManagerReadOnly = initFileManager(map);
         localFileManager.handleRequest(req, resp);
         writer.flush();
         JsonElement parse = parser.parse(new String(Files.readAllBytes(Paths.get(outputFilePath))));
 
-        assertTrue(parse.toString().contains(ClientErrorMessage.NOT_ALLOWED_SYSTEM));
+        assertTrue(parse.toString().contains(ClientErrorMessage.NOT_ALLOWED));
+    }
+
+    @Test
+    public void actionMoveTest() throws IOException, FMInitializationException {
+
+        final LocalFileManager localFileManager = initFileManager();
+        final String temporaryFolderPath = temporaryFolder.getRoot().getAbsolutePath() + '/' + FILE_ROOT;
+
+        final String movedDirName = "movedDir";
+        final String movedDirPath = temporaryFolder.getRoot().getAbsolutePath() + '/' + FILE_ROOT + "/" + movedDirName;
+        File movedDirFile = new File(movedDirPath);
+        Files.createDirectory(movedDirFile.toPath());
+
+        assertTrue(movedDirFile.exists());
+
+        PrintWriter writer = new PrintWriter(outputFilePath);
+
+        // mock the request
+        HttpServletRequest req = mock(HttpServletRequest.class);
+        HttpServletResponse resp = mock(HttpServletResponse.class);
+
+        // Add the sample data
+        File sampleImageTemp = new File(temporaryFolderPath + '/' + sampleImageFile.getName());
+
+        Files.copy(sampleImageFile.toPath(), sampleImageTemp.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+        try {
+            // create a thumbnail
+            localFileManager.getThumbnail("/" + sampleImageFile.getName(), true);
+        } catch (FileManagerException ignore) {
+            fail();
+        }
+
+        File oldThumbnail = new File(localFileManager.getThumbnailPath("/" + sampleImageFile.getName()));
+        File newThumbnail = new File(localFileManager.getThumbnailPath("/" + movedDirName + "/" + sampleImageFile.getName()));
+
+        assertTrue(oldThumbnail.exists());
+        assertFalse(newThumbnail.exists());
+
+        assertTrue(sampleImageTemp.exists());
+
+        given(resp.getWriter()).willReturn(writer);
+        given(req.getParameter(PARAM_MODE)).willReturn("move");
+        given(req.getParameter(PARAM_OLD)).willReturn("/" + sampleImageFile.getName());
+        given(req.getParameter(PARAM_NEW)).willReturn("/" + movedDirName + "/");
+        given(req.getMethod()).willReturn("GET");
+        localFileManager.handleRequest(req, resp);
+        writer.flush();
+
+        assertFalse(sampleImageTemp.exists());
+        assertFalse(oldThumbnail.exists());
+        assertTrue(newThumbnail.exists());
+
+        JsonElement jsonActual = parser.parse(new String(Files.readAllBytes(Paths.get(outputFilePath))));
+
+        // check if the method return the good file info
+        FileData folderInfo = null;
+        try {
+            folderInfo = localFileManager.getFileInfo("/" + movedDirName + "/" + sampleImageFile.getName());
+        } catch (FileManagerException ignore) {
+        }
+
+        Gson gson = new Gson();
+        JsonElement jsonExpected = parser.parse(gson.toJson(new SuccessResponse(folderInfo)));
+
+        assertEquals(jsonExpected, jsonActual);
+
+        // security test with readonly
+        Map<String, String> map = new HashMap<>();
+        map.put("readOnly", "true");
+        writer = new PrintWriter(outputFilePath);
+        given(resp.getWriter()).willReturn(writer);
+        given(req.getParameter(PARAM_OLD)).willReturn("/" + sampleImageFile.getName());
+        given(req.getParameter(PARAM_NEW)).willReturn("/" + movedDirName + "/");
+        final LocalFileManager localFileManagerReadOnly = initFileManager(map);
+        localFileManagerReadOnly.handleRequest(req, resp);
+        writer.flush();
+
+        JsonElement parse = parser.parse(new String(Files.readAllBytes(Paths.get(outputFilePath))));
+        assertTrue(parse.toString().contains(ClientErrorMessage.NOT_ALLOWED));
     }
 
     /**
-     *
      * @param json A JSON API String response
      * @return The String without timestamp/created/modified values
-     * @throws IOException
      */
     private String cleanStringTime(String json) throws IOException {
         Pattern p1 = Pattern.compile("(timestamp\":)\\d+");

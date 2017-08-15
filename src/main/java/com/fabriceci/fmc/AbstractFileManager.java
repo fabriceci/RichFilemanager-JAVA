@@ -40,42 +40,50 @@ public abstract class AbstractFileManager implements IFileManager {
     private static final Pattern NONLATIN = Pattern.compile("[^\\w-]");
     private static final Pattern WHITESPACE = Pattern.compile("[\\s]");
 
-    public AbstractFileManager(Locale locale, Map<String,String> options) {
+    public AbstractFileManager(Locale locale, Map<String, String> options) {
         // load server properties
-        InputStream tempLoadIS= null;
+        InputStream tempLoadIS = null;
 
-            // load default config file
-            tempLoadIS = Thread.currentThread().getContextClassLoader().getResourceAsStream(CONFIG_DEFAULT_PROPERTIES);
+        // load default config file
+        tempLoadIS = Thread.currentThread().getContextClassLoader().getResourceAsStream(CONFIG_DEFAULT_PROPERTIES);
+        try {
+            propertiesConfig.load(tempLoadIS);
+        } catch (IOException ignored) {
+        }
+
+        try {
+            tempLoadIS.close();
+        } catch (IOException ignored) {
+        }
+
+        if (locale != null) {
+            this.locale = locale;
+        }
+
+        // load custom config file if exists
+        tempLoadIS = Thread.currentThread().getContextClassLoader().getResourceAsStream(CONFIG_CUSTOM_PROPERTIES);
+        if (tempLoadIS != null) {
+            Properties customConfig = new Properties();
             try {
-                propertiesConfig.load(tempLoadIS);
-            } catch (IOException ignored) {}
-
-             try { tempLoadIS.close(); } catch(IOException ignored){}
-
-            if(locale != null) {
-                this.locale = locale;
+                customConfig.load(tempLoadIS);
+            } catch (IOException ignored) {
             }
 
-            // load custom config file if exists
-            tempLoadIS = Thread.currentThread().getContextClassLoader().getResourceAsStream(CONFIG_CUSTOM_PROPERTIES);
-            if(tempLoadIS != null){
-                Properties customConfig = new Properties();
-                try {
-                    customConfig.load(tempLoadIS);
-                } catch (IOException ignored) {}
-
-                propertiesConfig.putAll(customConfig);
-                try { tempLoadIS.close(); } catch(IOException ignored){}
+            propertiesConfig.putAll(customConfig);
+            try {
+                tempLoadIS.close();
+            } catch (IOException ignored) {
             }
+        }
 
         try {
             df = new SimpleDateFormat(propertiesConfig.getProperty("dateFormat"), new Locale("en"));
-        }catch(IllegalArgumentException e){
+        } catch (IllegalArgumentException e) {
             logger.error("The date format is not valid - setting the default one instead : yyyy-MM-dd HH:mm:ss");
             df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", new Locale("en"));
         }
 
-        if(options != null && !options.isEmpty()) {
+        if (options != null && !options.isEmpty()) {
             propertiesConfig.putAll(options);
         }
 
@@ -86,7 +94,7 @@ public abstract class AbstractFileManager implements IFileManager {
         this(locale, null);
     }
 
-    public AbstractFileManager(Map<String,String> options) {
+    public AbstractFileManager(Map<String, String> options) {
         this(null, options);
     }
 
@@ -103,10 +111,6 @@ public abstract class AbstractFileManager implements IFileManager {
         final String mode = request.getParameter("mode");
 
         final String pathParam = cleanPath(request.getParameter("path"));
-        final String newParam = request.getParameter("new");
-        final String oldParam = request.getParameter("old");
-        final String typeParam = request.getParameter("type");
-        final String name = request.getParameter("name");
 
         Object responseData = null;
         response.setStatus(200);
@@ -130,13 +134,22 @@ public abstract class AbstractFileManager implements IFileManager {
                         }
                         break;
                     case "getfolder":
+                        final String typeParam = request.getParameter("type");
                         if (!StringUtils.isEmpty(pathParam)) {
                             responseData = actionGetFolder(pathParam, typeParam);
                         }
                         break;
                     case "addfolder":
+                        final String name = request.getParameter("name");
                         if (!StringUtils.isEmpty(pathParam) && !StringUtils.isEmpty(name)) {
                             responseData = actionAddFolder(pathParam, name);
+                        }
+                        break;
+                    case "move":
+                        final String sourcePath = cleanPath(request.getParameter("old"));
+                        final String targetPath = cleanPath(request.getParameter("new"));
+                        if (!StringUtils.isEmpty(sourcePath) && !StringUtils.isEmpty(targetPath)) {
+                            responseData = actionMove(sourcePath, targetPath);
                         }
                         break;
                 }
@@ -149,7 +162,7 @@ public abstract class AbstractFileManager implements IFileManager {
         } catch (FileManagerException e) {
             logger.info(e.getMessage(), e);
             generateErrorResponse(response, e.getMessage(), e.getArguments());
-        } catch (Exception e){
+        } catch (Exception e) {
             logger.info(e.getMessage(), e);
             generateErrorResponse(response, "ERROR_SERVER", null);
         }
@@ -157,7 +170,7 @@ public abstract class AbstractFileManager implements IFileManager {
 
     }
 
-    private void generateErrorResponse(HttpServletResponse response,  String message, List<String> arguments){
+    private void generateErrorResponse(HttpServletResponse response, String message, List<String> arguments) {
         response.setStatus(200);
         response.addHeader("Content-Type", "application/json; charset=utf-8");
 
@@ -167,7 +180,8 @@ public abstract class AbstractFileManager implements IFileManager {
 
         try {
             response.getWriter().write(gson.toJson(new ErrorResponse(errorItem)));
-        } catch (IOException silent) {}
+        } catch (IOException silent) {
+        }
     }
 
     private void generateResponse(HttpServletResponse response, Object data) throws IOException {
@@ -210,7 +224,7 @@ public abstract class AbstractFileManager implements IFileManager {
     }
 
     @Override
-    public FileData actionMove(HttpServletRequest request) throws FileManagerException {
+    public FileData actionMove(String sourcePath, String targetPath) throws FileManagerException {
         throw new UnsupportedOperationException();
     }
 
@@ -225,7 +239,7 @@ public abstract class AbstractFileManager implements IFileManager {
     }
 
     @Override
-    public FileData actionSummarize() throws FileManagerException  {
+    public FileData actionSummarize() throws FileManagerException {
         throw new UnsupportedOperationException();
     }
 
@@ -289,17 +303,17 @@ public abstract class AbstractFileManager implements IFileManager {
         throw new UnsupportedOperationException();
     }
 
-    protected final boolean isAllowedImageExt(String ext){
+    protected final boolean isAllowedImageExt(String ext) {
         return Arrays.asList(propertiesConfig.getProperty("images.extensions").split(",")).contains(ext.toLowerCase());
     }
 
     protected final boolean isAllowedFileExtension(String file) {
         String extension = FileUtils.getExtension(file).toLowerCase();
 
-        boolean policyAllow= Boolean.parseBoolean(propertiesConfig.getProperty("extensions.policy.allow"));
+        boolean policyAllow = Boolean.parseBoolean(propertiesConfig.getProperty("extensions.policy.allow"));
         List<String> restrictions = Arrays.asList(propertiesConfig.getProperty("extensions.restrictions").split(","));
 
-        if(policyAllow) {
+        if (policyAllow) {
             return restrictions.contains(extension);
         } else {
             return !restrictions.contains(extension);
@@ -308,7 +322,7 @@ public abstract class AbstractFileManager implements IFileManager {
 
     protected final boolean isAllowedPattern(String name, boolean isDir) throws FileManagerException {
 
-        boolean policyAllow= Boolean.parseBoolean(propertiesConfig.getProperty("patterns.policy.allow"));
+        boolean policyAllow = Boolean.parseBoolean(propertiesConfig.getProperty("patterns.policy.allow"));
         try {
             if (isDir) {
                 List<String> restrictionsFolder = Arrays.asList(propertiesConfig.getProperty("patterns.restrictions.folder").split(","));
@@ -320,7 +334,7 @@ public abstract class AbstractFileManager implements IFileManager {
                 return policyAllow == isMatch;
 
             } else {
-                List<String> restrictionsFile =  Arrays.asList((propertiesConfig.getProperty("patterns.restrictions.file").split(",")));
+                List<String> restrictionsFile = Arrays.asList((propertiesConfig.getProperty("patterns.restrictions.file").split(",")));
                 boolean isMatch = false;
                 for (String regex : restrictionsFile) {
                     if (name.matches(regex)) isMatch = true;
@@ -328,30 +342,30 @@ public abstract class AbstractFileManager implements IFileManager {
 
                 return policyAllow == isMatch;
             }
-        }catch (PatternSyntaxException e){
-            logger.error("Regex Dir Syntax Exception : " + propertiesConfig.getProperty("excluded_dirs_REGEXP") , e);
+        } catch (PatternSyntaxException e) {
+            logger.error("Regex Dir Syntax Exception : " + propertiesConfig.getProperty("excluded_dirs_REGEXP"), e);
             throw new FileManagerException(ClientErrorMessage.ERROR_SERVER);
         }
     }
 
     protected void checkRestrictions(String name, boolean isDir) throws FileManagerException {
-        if(!isDir){
-            if(!isAllowedFileExtension(name)){
+        if (!isDir) {
+            if (!isAllowedFileExtension(name)) {
                 throw new FileManagerException(ClientErrorMessage.FORBIDDEN_NAME, Collections.singletonList(name));
             }
         }
 
-        if(!isAllowedPattern(name, isDir)){
+        if (!isAllowedPattern(name, isDir)) {
             throw new FileManagerException(ClientErrorMessage.INVALID_FILE_TYPE, Collections.singletonList(name));
         }
     }
 
     protected final BufferedImage generateThumbnail(BufferedImage source) {
-        return Scalr.resize(source, Scalr.Method.AUTOMATIC, Scalr.Mode.FIT_TO_WIDTH, Integer.parseInt(propertiesConfig.getProperty("image_thumbnail_maxWidth")), Integer.parseInt(propertiesConfig.getProperty("image_thumbnail_maxHeight")), Scalr.OP_ANTIALIAS);
+        return Scalr.resize(source, Scalr.Method.AUTOMATIC, Scalr.Mode.FIT_TO_WIDTH, Integer.parseInt(propertiesConfig.getProperty("images.thumbnail.maxWidth")), Integer.parseInt(propertiesConfig.getProperty("images.thumbnail.maxHeight")), Scalr.OP_ANTIALIAS);
     }
 
-    private static String cleanPath(String path){
-        if(path==null) return null;
+    private static String cleanPath(String path) {
+        if (path == null) return null;
         return path.replace("//", "/").replace("..", "");
     }
 
@@ -360,7 +374,7 @@ public abstract class AbstractFileManager implements IFileManager {
 
         boolean normalizeFilename = Boolean.parseBoolean(propertiesConfig.getProperty("normalizeFilename"));
 
-        if(!normalizeFilename) return input;
+        if (!normalizeFilename) return input;
 
         boolean charsLatinOnly = Boolean.parseBoolean(propertiesConfig.getProperty("charsLatinOnly"));
 

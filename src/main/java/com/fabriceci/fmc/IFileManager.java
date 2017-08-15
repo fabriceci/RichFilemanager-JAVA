@@ -30,7 +30,7 @@ public interface IFileManager {
 
     FileData actionRename(HttpServletRequest request) throws FileManagerException;
 
-    FileData actionMove(HttpServletRequest request) throws FileManagerException;
+    FileData actionMove(String sourcePath, String targetPath) throws FileManagerException;
 
     FileData actionGetImage(HttpServletRequest request, HttpServletResponse response, Boolean thumbnail) throws FileManagerException;
 

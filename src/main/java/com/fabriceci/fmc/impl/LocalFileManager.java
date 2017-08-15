@@ -9,8 +9,11 @@ import com.fabriceci.fmc.model.FileData;
 import com.fabriceci.fmc.model.FileType;
 import com.fabriceci.fmc.util.FileUtils;
 import com.fabriceci.fmc.util.ImageUtils;
+import com.fabriceci.fmc.util.StringUtils;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -42,11 +45,11 @@ public class LocalFileManager extends AbstractFileManager {
         String serverRoot = propertiesConfig.getProperty("serverRoot", "");
         String fileRoot = propertiesConfig.getProperty("fileRoot", "");
 
-        if(!serverRoot.isEmpty() && serverRoot.endsWith("/")){
+        if (!serverRoot.isEmpty() && serverRoot.endsWith("/")) {
             serverRoot = serverRoot.substring(0, serverRoot.length() - 1);
             propertiesConfig.setProperty("serverRoot", serverRoot);
         }
-        if(!fileRoot.isEmpty() && fileRoot.endsWith("/")){
+        if (!fileRoot.isEmpty() && fileRoot.endsWith("/")) {
             fileRoot = fileRoot.substring(0, fileRoot.length() - 1);
             propertiesConfig.setProperty("fileRoot", fileRoot);
         }
@@ -196,11 +199,11 @@ public class LocalFileManager extends AbstractFileManager {
         File parentFile = new File(docRoot.getPath() + path);
         File file = new File(docRoot.getPath() + path + filename);
 
-        if(readOnly){
+        if (readOnly) {
             throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED);
         }
 
-        if(!parentFile.canWrite()){
+        if (!parentFile.canWrite()) {
             throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED_SYSTEM);
         }
 
@@ -222,15 +225,136 @@ public class LocalFileManager extends AbstractFileManager {
         return getFileInfo(path + filename + "/");
     }
 
+
+    @Override
+    public FileData actionMove(String sourcePath, String targetPath) throws FileManagerException {
+
+        File sourceFile = getFile(sourcePath);
+        String filename = sourceFile.getName();
+        File targetDir = getFile(targetPath);
+        File targetFile = getFile(targetPath + "/" + filename);
+
+        String finalPath = targetPath + filename + (sourceFile.isDirectory() ? "/" : "");
+
+        if (readOnly) {
+            throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED);
+        }
+
+        if (!targetDir.exists() || !targetDir.isDirectory()) {
+            throw new FileManagerException(ClientErrorMessage.DIRECTORY_NOT_EXIST, Collections.singletonList(targetPath));
+        }
+
+        // check if not requesting main FM userfiles folder
+        if (sourceFile.equals(docRoot)) {
+            throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED);
+        }
+
+        // check system permission
+        if (!sourceFile.canRead() && !targetDir.canWrite()) {
+            throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED_SYSTEM);
+        }
+
+        // check if name are not excluded
+        checkRestrictions(targetFile.getName(), false);
+
+
+        // check if file already exists
+        if (targetFile.exists()) {
+            if (targetFile.isDirectory()) {
+                throw new FileManagerException(ClientErrorMessage.DIRECTORY_ALREADY_EXISTS, Collections.singletonList(targetPath));
+            } else {
+                throw new FileManagerException(ClientErrorMessage.FILE_ALREADY_EXISTS, Collections.singletonList(targetPath));
+            }
+        }
+
+        try {
+
+            Files.move(sourceFile.toPath(), targetFile.toPath());
+            File thumbnailFile = new File(getThumbnailPath(sourcePath));
+            if (thumbnailFile.exists()) {
+                if (thumbnailFile.isFile()) {
+                    File newThumbnailFile = new File(getThumbnailPath(targetPath + filename));
+                    if (newThumbnailFile.getParentFile().mkdirs()) {
+                        Files.move(thumbnailFile.toPath(), newThumbnailFile.toPath());
+                    } else {
+                        thumbnailFile.delete();
+                    }
+                } else {
+                    FileUtils.removeDirectory(thumbnailFile.toPath());
+                }
+            }
+
+        } catch (IOException e) {
+            if (sourceFile.isDirectory()) {
+                throw new FileManagerException("ERROR_MOVING_DIRECTORY", Collections.singletonList(targetPath));
+            } else {
+                throw new FileManagerException("ERROR_MOVING_FILE", Collections.singletonList(targetPath));
+            }
+
+        }
+
+        return getFileInfo(finalPath);
+    }
+
     private String getDynamicPath(String path) {
         String fileRoot = propertiesConfig.getProperty("fileRoot");
-        if(fileRoot.isEmpty()) return path;
+        if (fileRoot.isEmpty()) return path;
 
         return fileRoot + path;
     }
 
     private File getFile(String path) {
         return new File(docRoot.getPath() + path);
+    }
+
+    public String getThumbnailPath(String path) throws IOException {
+        return getThumbnailDir().getPath() + path;
+    }
+
+    public File getThumbnailDir() throws IOException {
+
+        final String serverRoot = propertiesConfig.getProperty("serverRoot", "");
+        final String thumbnailDirPath = propertiesConfig.getProperty("images.thumbnail.dir");
+        File thumbnailDirFile = new File(StringUtils.isEmpty(serverRoot) ? thumbnailDirPath : serverRoot + '/' + thumbnailDirPath);
+
+        if (!thumbnailDirFile.exists()) {
+            Files.createDirectory(thumbnailDirFile.toPath(), FileUtils.getPermissions755());
+        }
+
+        return thumbnailDirFile;
+    }
+
+    public File getThumbnail(String path, boolean create) throws FileManagerException, IOException {
+
+        File thumbnailFile = new File(getThumbnailPath(path));
+
+        if (thumbnailFile.exists()) {
+            return thumbnailFile;
+        } else if (!create) {
+            return null;
+        }
+
+        File originalFile = new File(docRoot.getPath() + path);
+        String ext = FileUtils.getExtension(originalFile.getName());
+
+        if (!originalFile.exists()) {
+            throw new FileManagerException(ClientErrorMessage.FILE_DOES_NOT_EXIST, Collections.singletonList(path));
+        }
+
+        try {
+            if (!thumbnailFile.mkdirs()) {
+                Files.createDirectories(thumbnailFile.getParentFile().toPath());
+            }
+
+            BufferedImage source = ImageIO.read(originalFile);
+            BufferedImage resizedImage = generateThumbnail(source);
+            ImageIO.write(resizedImage, ext, thumbnailFile);
+        } catch (IOException e) {
+            logger.error("Error during thumbnail generation - ext: " + ext + " name: " + originalFile.getName(), e);
+            return null;
+        }
+
+        return thumbnailFile;
     }
 
     /*
@@ -293,71 +417,6 @@ public class LocalFileManager extends AbstractFileManager {
             throw new FMIOException("Error serving image: " + file.getName() , e);
         }
         return null;
-    }
-
-    @Override
-    public JSONObject actionMove(HttpServletRequest request) throws FileManagerException {
-        String sourcePath = getPath(request, "old");
-        String targetPath = getPath(request, "new");
-
-        // security check
-        if (!targetPath.startsWith("/")) targetPath = "/" + targetPath;
-        if (!targetPath.endsWith("/")) targetPath += "/";
-
-        File sourceFile = getFile(sourcePath);
-        String filename = sourceFile.getName();
-        File targetDir = getFile(targetPath);
-        File targetFile = getFile(targetPath + "/" + filename);
-
-        String finalPath = targetPath + filename + (sourceFile.isDirectory() ? "/" : "");
-
-        if (!hasPermission("move")) {
-            return getErrorResponse("NOT_ALLOWED");
-        }
-        if (!targetDir.exists() || !targetDir.isDirectory()) {
-            return getErrorResponse("DIRECTORY_NOT_EXIST", new String[] { targetPath });
-        }
-        // check system permission
-        if (!sourceFile.canRead() && !targetDir.canWrite()) {
-            return getErrorResponse("NOT_ALLOWED_SYSTEM");
-        }
-        // check if not requesting main FM userfiles folder
-        if (sourceFile.equals(docRoot)) {
-            return getErrorResponse("NOT_ALLOWED");
-        }
-        // check if name are not excluded
-        if (!isAllowedName(targetFile.getName(), false)) {
-            return getErrorResponse("INVALID_DIRECTORY_OR_FILE");
-        }
-        // check if file already exists
-        if (targetFile.exists()) {
-            if (targetFile.isDirectory()) {
-                return getErrorResponse("DIRECTORY_ALREADY_EXISTS", new String[] { targetFile.getName()});
-            } else {
-                return getErrorResponse("FILE_ALREADY_EXISTS" , new String[] { targetFile.getName()});
-            }
-        }
-
-        try {
-            Files.move(sourceFile.toPath(), targetFile.toPath());
-            File thumbnailFile = new File(getThumbnailPath(sourcePath));
-            if (thumbnailFile.exists()) {
-                if (thumbnailFile.isFile()) {
-                    thumbnailFile.delete();
-                } else {
-                    FileUtils.removeDirectory(thumbnailFile.toPath());
-                }
-            }
-        } catch (IOException e) {
-            if (sourceFile.isDirectory()) {
-                return getErrorResponse("ERROR_MOVING_DIRECTORY", new String[]{ sourceFile.getName(), targetPath});
-            } else {
-                return getErrorResponse("ERROR_MOVING_FILE", new String[]{sourceFile.getName(), targetPath});
-            }
-
-        }
-
-        return new JSONObject().put("data", new JSONObject(getFileInfo(finalPath)));
     }
 
     @Override
@@ -828,56 +887,6 @@ public class LocalFileManager extends AbstractFileManager {
         result.put("type", "summary");
         result.put("attributes", attributes);
         return new JSONObject().put("data", result);
-    }
-
-    private File getThumbnailDir() throws FMIOException {
-
-        File thumbnailDir = new File(propertiesConfig.getProperty("image_thumbnail_dir"));
-
-        if (!thumbnailDir.exists()) {
-            try {
-                Files.createDirectory(thumbnailDir.toPath(), FileUtils.getPermissions755());
-            } catch (IOException e) {
-                throw new FMIOException("Cannot create the directory: " + thumbnailDir.getAbsolutePath(), e);
-            }
-        }
-        return thumbnailDir;
-    }
-
-    private String getThumbnailPath(String path) throws FMIOException {
-        return getThumbnailDir().getPath() + path;
-    }
-
-    private File getThumbnail(String path, boolean create) throws FMIOException, FMFileNotFoundException {
-
-        File thumbnailFile = new File(getThumbnailPath(path));
-
-        if (thumbnailFile.exists()) {
-            return thumbnailFile;
-        } else if (!create) {
-            return null;
-        }
-
-        File originalFile = new File(docRoot.getPath() + path);
-        String ext = FileUtils.getExtension(originalFile.getName());
-
-        if (!originalFile.exists())
-            throw new FMFileNotFoundException(path);
-
-        try {
-            if (!thumbnailFile.mkdirs()) {
-                Files.createDirectories(thumbnailFile.getParentFile().toPath());
-            }
-
-            BufferedImage source = ImageIO.read(originalFile);
-            BufferedImage resizedImage = generateThumbnail(source);
-            ImageIO.write(resizedImage, ext, thumbnailFile);
-        } catch (IOException e) {
-            logger.error("Error during thumbnail generation - ext: " + ext + " name: " + originalFile.getName(), e);
-            return null;
-        }
-
-        return thumbnailFile;
     }
 
     private JSONArray uploadFiles(HttpServletRequest request, String targetDirectory) throws FileManagerException {
