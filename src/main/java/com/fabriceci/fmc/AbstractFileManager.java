@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.DateFormat;
@@ -345,6 +346,45 @@ public abstract class AbstractFileManager implements IFileManager {
         } catch (PatternSyntaxException e) {
             logger.error("Regex Dir Syntax Exception : " + propertiesConfig.getProperty("excluded_dirs_REGEXP"), e);
             throw new FileManagerException(ClientErrorMessage.ERROR_SERVER);
+        }
+    }
+
+    protected void checkPath(File file) throws FileManagerException {
+        checkPath(file, null);
+    }
+
+    protected void checkPath(File file, Boolean isDir) throws FileManagerException {
+        if(!file.exists()){
+            if(file.isDirectory()){
+                throw new FileManagerException(ClientErrorMessage.DIRECTORY_NOT_EXIST, Collections.singletonList(file.getName()));
+            } else {
+                throw new FileManagerException(ClientErrorMessage.FILE_DOES_NOT_EXIST, Collections.singletonList(file.getName()));
+            }
+        }
+
+        if(isDir != null){
+            if(file.isDirectory() && isDir == false){
+                throw new FileManagerException(ClientErrorMessage.INVALID_FILE_TYPE);
+            }
+        }
+    }
+
+    protected void checkReadPermission(File file) throws FileManagerException {
+
+        if(!file.canRead()){
+            throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED_SYSTEM);
+        }
+    }
+
+    protected void checkWritePermission(File file) throws FileManagerException {
+
+        if (readOnly) {
+            throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED);
+        }
+
+        // check system permission
+        if (!file.canWrite()) {
+            throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED_SYSTEM);
         }
     }
 

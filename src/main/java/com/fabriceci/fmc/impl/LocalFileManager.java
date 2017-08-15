@@ -72,16 +72,11 @@ public class LocalFileManager extends AbstractFileManager {
 
         File dir = getFile(path);
 
-        if (!dir.exists()) {
-            throw new FileManagerException(ClientErrorMessage.DIRECTORY_NOT_EXIST);
-        }
+        checkPath(dir);
+        checkReadPermission(dir);
 
         if (!dir.isDirectory()) {
             throw new FileManagerException(ClientErrorMessage.DIRECTORY_NOT_EXIST, Collections.singletonList(path));
-        }
-
-        if (!dir.canRead()) {
-            throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED_SYSTEM);
         }
 
         checkRestrictions(dir.getName(), true);
@@ -130,6 +125,8 @@ public class LocalFileManager extends AbstractFileManager {
             throw new FileManagerException(ClientErrorMessage.FORBIDDEN_ACTION_DIR);
         }
 
+        checkPath(file);
+        checkReadPermission(file);
         checkRestrictions(filename, false);
 
         // check if file is readable
@@ -199,14 +196,8 @@ public class LocalFileManager extends AbstractFileManager {
         File parentFile = new File(docRoot.getPath() + path);
         File file = new File(docRoot.getPath() + path + filename);
 
-        if (readOnly) {
-            throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED);
-        }
-
-        if (!parentFile.canWrite()) {
-            throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED_SYSTEM);
-        }
-
+        checkPath(parentFile);
+        checkWritePermission(parentFile);
         checkRestrictions(name, true);
 
         if (filename.length() == 0) {
@@ -225,7 +216,6 @@ public class LocalFileManager extends AbstractFileManager {
         return getFileInfo(path + filename + "/");
     }
 
-
     @Override
     public FileData actionMove(String sourcePath, String targetPath) throws FileManagerException {
 
@@ -236,11 +226,7 @@ public class LocalFileManager extends AbstractFileManager {
 
         String finalPath = targetPath + filename + (sourceFile.isDirectory() ? "/" : "");
 
-        if (readOnly) {
-            throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED);
-        }
-
-        if (!targetDir.exists() || !targetDir.isDirectory()) {
+        if (!targetDir.isDirectory()) {
             throw new FileManagerException(ClientErrorMessage.DIRECTORY_NOT_EXIST, Collections.singletonList(targetPath));
         }
 
@@ -249,14 +235,14 @@ public class LocalFileManager extends AbstractFileManager {
             throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED);
         }
 
-        // check system permission
-        if (!sourceFile.canRead() && !targetDir.canWrite()) {
-            throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED_SYSTEM);
-        }
-
-        // check if name are not excluded
-        checkRestrictions(targetFile.getName(), false);
-
+        // check permissions
+        checkPath(sourceFile);
+        checkPath(targetDir);
+        checkReadPermission(sourceFile);
+        checkWritePermission(sourceFile);
+        checkWritePermission(targetDir);
+        checkRestrictions(sourceFile.getName(), false);
+        checkRestrictions(targetFile.getName(), true);
 
         // check if file already exists
         if (targetFile.exists()) {
@@ -294,6 +280,58 @@ public class LocalFileManager extends AbstractFileManager {
         return getFileInfo(finalPath);
     }
 
+    /*
+    @Override
+    public FileData actionDelete(String path) throws FileManagerException {
+
+        File thumbnail = new File(getThumbnailPath(path));
+        File file = new File(docRoot.getPath() + path);
+
+        if (readOnly) {
+            throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED);
+        }
+
+        if (!file.exists()) {
+            return new FileManagerException("INVALID_DIRECTORY_OR_FILE");
+        }
+
+        // check system permission
+        if (!file.canRead() && !file.canWrite()) {
+            throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED_SYSTEM);
+        }
+
+
+
+        if (!file.canWrite()) {
+            return getErrorResponse("NOT_ALLOWED_SYSTEM");
+        }
+
+        if (file.equals(docRoot)) {
+            return getErrorResponse("NOT_ALLOWED");
+        }
+
+        // Recover the result before the operation
+        JSONObject result = new JSONObject().put("data", new JSONObject(getFileInfo(path)));
+        if (file.isDirectory()) {
+            try {
+                FileUtils.removeDirectory(file.toPath());
+                if (thumbnail.exists()) {
+                    FileUtils.removeDirectory(thumbnail.toPath());
+                }
+            } catch (IOException e) {
+                throw new FMIOException("Error during removing directory: " + file.getName(), e);
+            }
+        } else {
+            if (!file.delete()) {
+                return getErrorResponse(String.format("ERROR_SERVER", path));
+            }
+            if (thumbnail.exists()) thumbnail.delete();
+        }
+
+        return result;
+    }
+*/
+
     private String getDynamicPath(String path) {
         String fileRoot = propertiesConfig.getProperty("fileRoot");
         if (fileRoot.isEmpty()) return path;
@@ -305,18 +343,23 @@ public class LocalFileManager extends AbstractFileManager {
         return new File(docRoot.getPath() + path);
     }
 
-    public String getThumbnailPath(String path) throws IOException {
+    public String getThumbnailPath(String path) throws FileManagerException {
         return getThumbnailDir().getPath() + path;
     }
 
-    public File getThumbnailDir() throws IOException {
+    public File getThumbnailDir() throws FileManagerException {
 
         final String serverRoot = propertiesConfig.getProperty("serverRoot", "");
         final String thumbnailDirPath = propertiesConfig.getProperty("images.thumbnail.dir");
         File thumbnailDirFile = new File(StringUtils.isEmpty(serverRoot) ? thumbnailDirPath : serverRoot + '/' + thumbnailDirPath);
 
         if (!thumbnailDirFile.exists()) {
-            Files.createDirectory(thumbnailDirFile.toPath(), FileUtils.getPermissions755());
+            try {
+                Files.createDirectory(thumbnailDirFile.toPath(), FileUtils.getPermissions755());
+            } catch(IOException e){
+                logger.error("Could not create the thumbnail directory: " + thumbnailDirFile.getAbsolutePath(), e);
+                throw new FileManagerException(ClientErrorMessage.ERROR_SERVER);
+            }
         }
 
         return thumbnailDirFile;
@@ -489,50 +532,6 @@ public class LocalFileManager extends AbstractFileManager {
         }
 
         return new JSONObject().put("data", new JSONObject(getFileInfo(targetPath)));
-    }
-
-    @Override
-    public JSONObject actionDelete(HttpServletRequest request) throws FileManagerException {
-
-        String path = getPath(request, "path");
-        File thumbnail = new File(getThumbnailPath(path));
-        File file = new File(docRoot.getPath() + path);
-
-        if (!hasPermission("delete")) {
-            return getErrorResponse("NOT_ALLOWED");
-        }
-
-        if (!file.exists() || !isAllowedName(file.getName(), false)) {
-            return getErrorResponse("INVALID_DIRECTORY_OR_FILE");
-        }
-
-        if (!file.canWrite()) {
-            return getErrorResponse("NOT_ALLOWED_SYSTEM");
-        }
-
-        if (file.equals(docRoot)) {
-            return getErrorResponse("NOT_ALLOWED");
-        }
-
-        // Recover the result before the operation
-        JSONObject result = new JSONObject().put("data", new JSONObject(getFileInfo(path)));
-        if (file.isDirectory()) {
-            try {
-                FileUtils.removeDirectory(file.toPath());
-                if (thumbnail.exists()) {
-                    FileUtils.removeDirectory(thumbnail.toPath());
-                }
-            } catch (IOException e) {
-                throw new FMIOException("Error during removing directory: " + file.getName(), e);
-            }
-        } else {
-            if (!file.delete()) {
-                return getErrorResponse(String.format("ERROR_SERVER", path));
-            }
-            if (thumbnail.exists()) thumbnail.delete();
-        }
-
-        return result;
     }
 
     @Override

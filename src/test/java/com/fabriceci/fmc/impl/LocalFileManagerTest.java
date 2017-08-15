@@ -80,13 +80,16 @@ public class LocalFileManagerTest {
     }
 
     private LocalFileManager initFileManager() throws IOException, FMInitializationException {
-        return initFileManager(null);
+        return initFileManager(null, true);
     }
 
-    private LocalFileManager initFileManager(Map<String, String> extraOptions) throws IOException, FMInitializationException {
-        temporaryFolder.delete();
-        temporaryFolder.create();
-        temporaryFolder.newFolder(FILE_ROOT);
+    private LocalFileManager initFileManager(Map<String, String> extraOptions, boolean delete) throws IOException, FMInitializationException {
+
+        if(delete){
+            temporaryFolder.delete();
+            temporaryFolder.create();
+            temporaryFolder.newFolder(FILE_ROOT);
+        }
         Map<String, String> options = new HashMap<>();
         options.put("serverRoot", temporaryFolder.getRoot().getAbsolutePath());
         options.put("fileRoot", FILE_ROOT);
@@ -266,8 +269,8 @@ public class LocalFileManagerTest {
         writer = new PrintWriter(outputFilePath);
         given(resp.getWriter()).willReturn(writer);
         given(req.getParameter(PARAM_NAME)).willReturn(newFolderName + "2");
-        final LocalFileManager localFileManagerReadOnly = initFileManager(map);
-        localFileManager.handleRequest(req, resp);
+        final LocalFileManager localFileManagerReadOnly = initFileManager(map, false);
+        localFileManagerReadOnly.handleRequest(req, resp);
         writer.flush();
         JsonElement parse = parser.parse(new String(Files.readAllBytes(Paths.get(outputFilePath))));
 
@@ -275,7 +278,7 @@ public class LocalFileManagerTest {
     }
 
     @Test
-    public void actionMoveTest() throws IOException, FMInitializationException {
+    public void actionMoveTest() throws IOException, FileManagerException {
 
         final LocalFileManager localFileManager = initFileManager();
         final String temporaryFolderPath = temporaryFolder.getRoot().getAbsolutePath() + '/' + FILE_ROOT;
@@ -344,9 +347,9 @@ public class LocalFileManagerTest {
         map.put("readOnly", "true");
         writer = new PrintWriter(outputFilePath);
         given(resp.getWriter()).willReturn(writer);
-        given(req.getParameter(PARAM_OLD)).willReturn("/" + sampleImageFile.getName());
-        given(req.getParameter(PARAM_NEW)).willReturn("/" + movedDirName + "/");
-        final LocalFileManager localFileManagerReadOnly = initFileManager(map);
+        given(req.getParameter(PARAM_OLD)).willReturn("/" + movedDirName + "/" + sampleImageFile.getName());
+        given(req.getParameter(PARAM_NEW)).willReturn("/");
+        final LocalFileManager localFileManagerReadOnly = initFileManager(map, false);
         localFileManagerReadOnly.handleRequest(req, resp);
         writer.flush();
 
