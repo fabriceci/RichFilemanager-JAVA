@@ -158,6 +158,12 @@ public abstract class AbstractFileManager implements IFileManager {
                             responseData = actionDelete(pathParam);
                         }
                         break;
+                    case "getimage":
+                        if (!StringUtils.isEmpty(pathParam)) {
+                            Boolean thumbnail = Boolean.parseBoolean(request.getParameter("thumbnail"));
+                            responseData = actionGetImage(response, pathParam, thumbnail);
+                        }
+                        break;
                 }
             }
 
@@ -235,7 +241,7 @@ public abstract class AbstractFileManager implements IFileManager {
     }
 
     @Override
-    public FileData actionGetImage(HttpServletRequest request, HttpServletResponse response, Boolean thumbnail) throws FileManagerException {
+    public FileData actionGetImage(HttpServletResponse response, String path, Boolean thumbnail) throws FileManagerException {
         throw new UnsupportedOperationException();
     }
 
@@ -368,7 +374,7 @@ public abstract class AbstractFileManager implements IFileManager {
         }
 
         if(isDir != null){
-            if(file.isDirectory() && isDir == false){
+            if(file.isDirectory() && !isDir){
                 throw new FileManagerException(ClientErrorMessage.INVALID_FILE_TYPE);
             }
         }

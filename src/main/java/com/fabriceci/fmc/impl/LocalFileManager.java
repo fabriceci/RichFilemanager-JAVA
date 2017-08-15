@@ -7,15 +7,16 @@ import com.fabriceci.fmc.error.FileManagerException;
 import com.fabriceci.fmc.model.FileAttributes;
 import com.fabriceci.fmc.model.FileData;
 import com.fabriceci.fmc.model.FileType;
+import com.fabriceci.fmc.util.FileManagerUtils;
 import com.fabriceci.fmc.util.FileUtils;
 import com.fabriceci.fmc.util.ImageUtils;
 import com.fabriceci.fmc.util.StringUtils;
 
 import javax.imageio.ImageIO;
+import javax.servlet.http.HttpServletResponse;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
@@ -317,6 +318,60 @@ public class LocalFileManager extends AbstractFileManager {
         return result;
     }
 
+    @Override
+    public FileData actionGetImage(HttpServletResponse response, String path, Boolean thumbnail) throws FileManagerException {
+        InputStream is = null;
+        File file = getFile(path);
+
+        checkPath(file);
+        checkReadPermission(file);
+        checkRestrictions(path, file.isDirectory());
+
+        if (file.isDirectory()) {
+            throw new FileManagerException(ClientErrorMessage.FORBIDDEN_ACTION_DIR);
+        }
+
+        checkRestrictions(path, file.isDirectory());
+
+        try {
+            String filename = file.getName();
+            String fileExt = filename.substring(filename.lastIndexOf(".") + 1);
+            String mimeType = (!StringUtils.isEmpty(getExtension(fileExt))) ? FileManagerUtils.getMimeTypeByExt(fileExt) : "application/octet-stream";
+            long fileSize = file.length();
+            if (thumbnail) {
+
+                if (Boolean.parseBoolean(propertiesConfig.getProperty("images.thumbnail.enabled"))) {
+
+                    File thumbnailFile = getThumbnail(path, true);
+                    if (thumbnailFile == null) throw new FileManagerException(ClientErrorMessage.ERROR_SERVER);
+                    is = new FileInputStream(thumbnailFile);
+                    fileSize = thumbnailFile.length();
+                } else {
+                    // no cache
+                    BufferedImage image = ImageIO.read(file);
+                    BufferedImage resizedImage = generateThumbnail(image);
+                    ByteArrayOutputStream os = new ByteArrayOutputStream();
+                    ImageIO.write(resizedImage, fileExt, os);
+                    is = new ByteArrayInputStream(os.toByteArray());
+                    fileSize = os.toByteArray().length;
+                }
+
+            } else {
+                is = new FileInputStream(file);
+            }
+
+            response.setContentType(mimeType);
+            response.setHeader("Content-Length", Long.toString(fileSize));
+            response.setHeader("Content-Transfer-Encoding", "binary");
+            response.setHeader("Content-Disposition", "inline; filename=\"" + filename + "\"");
+
+            FileUtils.copy(new BufferedInputStream(is), response.getOutputStream());
+        } catch (IOException e) {
+            logger.error("Error serving image: " + file.getName() , e);
+            throw new FileManagerException(ClientErrorMessage.ERROR_SERVER);
+        }
+        return null;
+    }
 
     private String getDynamicPath(String path) {
         String fileRoot = propertiesConfig.getProperty("fileRoot");
@@ -383,66 +438,7 @@ public class LocalFileManager extends AbstractFileManager {
     }
 
     /*
-    @Override
-    public JSONObject actionGetImage(HttpServletRequest request, HttpServletResponse response, Boolean thumbnail) throws FileManagerException {
-        InputStream is = null;
-        String path = getPath(request, "path");
-        File file = getFile(path);
 
-        if (!file.exists()) {
-            return getErrorResponse("FILE_DOES_NOT_EXIST", new String[]{file.getName()});
-        }
-
-        if (file.isDirectory()) {
-            return getErrorResponse("FORBIDDEN_ACTION_DIR");
-        }
-
-        if (!file.canRead()) {
-            return getErrorResponse("NOT_ALLOWED_SYSTEM");
-        }
-
-        if (!isAllowedImageExt(getExtension(file.getName()))) {
-            return getErrorResponse("INVALID_FILE_TYPE");
-        }
-
-        try {
-            String filename = file.getName();
-            String fileExt = filename.substring(filename.lastIndexOf(".") + 1);
-            String mimeType = (!StringUtils.isEmpty(getExtension(fileExt))) ? FileManagerUtils.getMimeTypeByExt(fileExt) : "application/octet-stream";
-            long fileSize = file.length();
-            if (thumbnail) {
-
-                if (Boolean.parseBoolean(propertiesConfig.getProperty("image_thumbnail_enabled"))) {
-
-                    File thumbnailFile = getThumbnail(path, true);
-                    if (thumbnailFile == null) return getErrorResponse("ERROR_SERVER");
-                    is = new FileInputStream(thumbnailFile);
-                    fileSize = thumbnailFile.length();
-                } else {
-                    // no cache
-                    BufferedImage image = ImageIO.read(file);
-                    BufferedImage resizedImage = generateThumbnail(image);
-                    ByteArrayOutputStream os = new ByteArrayOutputStream();
-                    ImageIO.write(resizedImage, fileExt, os);
-                    is = new ByteArrayInputStream(os.toByteArray());
-                    fileSize = os.toByteArray().length;
-                }
-
-            } else {
-                is = new FileInputStream(file);
-            }
-
-            response.setContentType(mimeType);
-            response.setHeader("Content-Length", Long.toString(fileSize));
-            response.setHeader("Content-Transfer-Encoding", "binary");
-            response.setHeader("Content-Disposition", "inline; filename=\"" + filename + "\"");
-
-            FileUtils.copy(new BufferedInputStream(is), response.getOutputStream());
-        } catch (IOException e) {
-            throw new FMIOException("Error serving image: " + file.getName() , e);
-        }
-        return null;
-    }
 
     @Override
     public JSONObject actionRename(HttpServletRequest request) throws FileManagerException {
