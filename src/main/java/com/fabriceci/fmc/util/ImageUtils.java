@@ -20,4 +20,18 @@ public class ImageUtils {
         }
         return dim;
     }
+
+    public static Dimension getImageSize(File file){
+
+        BufferedImage readImage = null;
+        Dimension dim = new Dimension();
+        try {
+            readImage = ImageIO.read(file);
+            dim.height = readImage.getHeight();
+            dim.width = readImage.getWidth();
+        } catch (Exception e) {
+            readImage = null;
+        }
+        return dim;
+    }
 }

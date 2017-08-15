@@ -1,10 +1,12 @@
 package com.fabriceci.fmc.impl;
 
+import com.fabriceci.StubServletOutputStream;
 import com.fabriceci.fmc.error.ClientErrorMessage;
 import com.fabriceci.fmc.error.FMInitializationException;
 import com.fabriceci.fmc.error.FileManagerException;
 import com.fabriceci.fmc.model.FileData;
 import com.fabriceci.fmc.model.SuccessResponse;
+import com.fabriceci.fmc.util.ImageUtils;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
@@ -16,6 +18,7 @@ import org.junit.rules.TemporaryFolder;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -40,6 +43,7 @@ public class LocalFileManagerTest {
     private final static String PARAM_NAME = "name";
     private final static String PARAM_NEW = "new";
     private final static String PARAM_OLD = "old";
+    private final static String PARAM_THUMBNAIL = "thumbnail";
 
     private final static String THUMBNAIL_DIR = "_thumbs";
 
@@ -445,6 +449,59 @@ public class LocalFileManagerTest {
 
         JsonElement parse = parser.parse(new String(Files.readAllBytes(Paths.get(outputFilePath))));
         assertTrue(parse.toString().contains(ClientErrorMessage.NOT_ALLOWED));
+
+    }
+
+    @Test
+    public void actionGetImageTest() throws IOException, FMInitializationException {
+        final LocalFileManager localFileManager = initFileManager();
+        final String temporaryFolderPath = temporaryFolder.getRoot().getAbsolutePath() + '/' + FILE_ROOT;
+
+        PrintWriter writer = new PrintWriter(outputFilePath);
+
+        // mock the request
+        HttpServletRequest req = mock(HttpServletRequest.class);
+        HttpServletResponse resp = mock(HttpServletResponse.class);
+
+        // Add the sample data
+        File sampleImageTemp = new File(temporaryFolderPath + '/' + sampleImageFile.getName());
+        Files.copy(sampleImageFile.toPath(), sampleImageTemp.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+        // normal file
+        File resultFile = new File(temporaryOuputFolder.getRoot().getAbsolutePath() + "/" + "foo.jpg");
+        StubServletOutputStream servletOutputStream = new StubServletOutputStream(resultFile);
+
+        given(resp.getWriter()).willReturn(writer);
+        given(resp.getOutputStream()).willReturn(servletOutputStream);
+        given(req.getParameter(PARAM_MODE)).willReturn("getimage");
+        given(req.getParameter(PARAM_PATH)).willReturn("/" + sampleImageFile.getName());
+        given(req.getMethod()).willReturn("GET");
+        localFileManager.handleRequest(req, resp);
+        writer.flush();
+        servletOutputStream.flush();
+
+        assertTrue(resultFile.exists());
+        Dimension dim = ImageUtils.getImageSize(resultFile);
+        assertTrue(dim.getHeight() == 162);
+        assertTrue(dim.getWidth() == 200);
+
+        // thumbnail file
+        resultFile.delete();
+        writer = new PrintWriter(outputFilePath);
+        servletOutputStream = new StubServletOutputStream(resultFile);
+
+        given(resp.getWriter()).willReturn(writer);
+        given(resp.getOutputStream()).willReturn(servletOutputStream);
+        given(req.getParameter(PARAM_THUMBNAIL)).willReturn("true");
+        given(req.getParameter(PARAM_PATH)).willReturn("/" + sampleImageFile.getName());
+        given(req.getMethod()).willReturn("GET");
+        localFileManager.handleRequest(req, resp);
+        writer.flush();
+        servletOutputStream.flush();
+
+        dim = ImageUtils.getImageSize(resultFile);
+        assertTrue(dim.getHeight() == 81);
+        assertTrue(dim.getWidth() == 100);
 
     }
 
