@@ -26,22 +26,17 @@ import java.util.regex.PatternSyntaxException;
 
 public abstract class AbstractFileManager implements IFileManager {
 
-    protected final static String CONFIG_DEFAULT_PROPERTIES = "filemanager.config.default.properties";
-    protected final static String CONFIG_CUSTOM_PROPERTIES = "filemanager.config.properties";
+    private final static String CONFIG_DEFAULT_PROPERTIES = "filemanager.config.default.properties";
+    private final static String CONFIG_CUSTOM_PROPERTIES = "filemanager.config.properties";
     protected final static String LANG_FILE = "filemanager.lang.en.properties";
-    protected final Logger logger = LoggerFactory.getLogger(AbstractFileManager.class);
-
-    protected boolean readOnly = false;
-
-    protected Properties propertiesConfig = new Properties();
-    protected Locale locale;
-
-    protected DateFormat df;
-
     private static final Pattern NONLATIN = Pattern.compile("[^\\w-]");
     private static final Pattern WHITESPACE = Pattern.compile("[\\s]");
+    protected final Logger logger = LoggerFactory.getLogger(AbstractFileManager.class);
+    protected boolean readOnly = false;
+    protected Properties propertiesConfig = new Properties();
+    protected DateFormat df;
 
-    public AbstractFileManager(Locale locale, Map<String, String> options) {
+    public AbstractFileManager(Map<String, String> options) {
         // load server properties
         InputStream tempLoadIS = null;
 
@@ -55,10 +50,6 @@ public abstract class AbstractFileManager implements IFileManager {
         try {
             tempLoadIS.close();
         } catch (IOException ignored) {
-        }
-
-        if (locale != null) {
-            this.locale = locale;
         }
 
         // load custom config file if exists
@@ -91,18 +82,14 @@ public abstract class AbstractFileManager implements IFileManager {
         readOnly = Boolean.parseBoolean(propertiesConfig.getProperty("readOnly"));
     }
 
-    public AbstractFileManager(Locale locale) {
-        this(locale, null);
-    }
-
-    public AbstractFileManager(Map<String, String> options) {
-        this(null, options);
-    }
-
     public AbstractFileManager() {
-        this(null, null);
+        this(null);
     }
 
+    private static String cleanPath(String path) {
+        if (path == null) return null;
+        return path.replace("//", "/").replace("..", "");
+    }
 
     public final void handleRequest(HttpServletRequest request, HttpServletResponse response) {
 
@@ -110,8 +97,9 @@ public abstract class AbstractFileManager implements IFileManager {
 
         final String method = request.getMethod();
         final String mode = request.getParameter("mode");
-
         final String pathParam = cleanPath(request.getParameter("path"));
+        String sourcePath = null;
+        String targetPath = null;
 
         Object responseData = null;
         response.setStatus(200);
@@ -147,8 +135,8 @@ public abstract class AbstractFileManager implements IFileManager {
                         }
                         break;
                     case "move":
-                        final String sourcePath = cleanPath(request.getParameter("old"));
-                        final String targetPath = cleanPath(request.getParameter("new"));
+                        sourcePath = cleanPath(request.getParameter("old"));
+                        targetPath = cleanPath(request.getParameter("new"));
                         if (!StringUtils.isEmpty(sourcePath) && !StringUtils.isEmpty(targetPath)) {
                             responseData = actionMove(sourcePath, targetPath);
                         }
@@ -162,6 +150,55 @@ public abstract class AbstractFileManager implements IFileManager {
                         if (!StringUtils.isEmpty(pathParam)) {
                             Boolean thumbnail = Boolean.parseBoolean(request.getParameter("thumbnail"));
                             responseData = actionGetImage(response, pathParam, thumbnail);
+                        }
+                        break;
+                    // TO DO :
+                    case "rename":
+                        sourcePath = cleanPath(request.getParameter("old"));
+                        targetPath = cleanPath(request.getParameter("new"));
+                        if (!StringUtils.isEmpty(sourcePath) && !StringUtils.isEmpty(targetPath)) {
+                            responseData = actionRename(sourcePath, targetPath);
+                        }
+                        break;
+                    case "download":
+                        if (!StringUtils.isEmpty(pathParam)) {
+                            responseData = actionDownload(response, pathParam);
+                        }
+                        break;
+                    case "editfile":
+                        if (!StringUtils.isEmpty(pathParam)) {
+                            responseData = actionEditFile(pathParam);
+                        }
+                        break;
+                    case "readfile" :
+                        if (!StringUtils.isEmpty(pathParam)) {
+                            responseData = actionEditFile(pathParam);
+                        }
+                        break;
+                    case "summarize" :
+                        responseData = actionSummarize();
+                    break;
+                }
+            } else if (method.equals("POST")) {
+                switch (mode) {
+                    default:
+                        throw new FileManagerException(ClientErrorMessage.MODE_ERROR);
+                    case "upload":
+                        if (!StringUtils.isEmpty(pathParam)) {
+                            responseData = actionUpload(pathParam);
+                        }
+                        break;
+                    case "savefile":
+                        final String contentParam = cleanPath(request.getParameter("content"));
+                        if (!StringUtils.isEmpty(pathParam) && !StringUtils.isEmpty(contentParam)) {
+                            responseData = actionSaveFile(pathParam, contentParam);
+                        }
+                        break;
+                    case "extract":
+                        sourcePath = cleanPath(request.getParameter("source"));
+                        targetPath = cleanPath(request.getParameter("target"));
+                        if (!StringUtils.isEmpty(sourcePath) && !StringUtils.isEmpty(targetPath)) {
+                            responseData = actionExtract(sourcePath, targetPath);
                         }
                         break;
                 }
@@ -192,8 +229,7 @@ public abstract class AbstractFileManager implements IFileManager {
 
         try {
             response.getWriter().write(gson.toJson(new ErrorResponse(errorItem)));
-        } catch (IOException silent) {
-        }
+        } catch (IOException ignore) {}
     }
 
     private void generateResponse(HttpServletResponse response, Object data) throws IOException {
@@ -203,76 +239,6 @@ public abstract class AbstractFileManager implements IFileManager {
         Gson gson = new GsonBuilder().create();
 
         response.getWriter().write(gson.toJson(new SuccessResponse(data)));
-    }
-
-    @Override
-    public FileData actionGetFile(String path) throws FileManagerException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public List<FileData> actionGetFolder(String path, String type) throws FileManagerException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public FileData actionDownload(HttpServletRequest request, HttpServletResponse response) throws FileManagerException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public FileData actionAddFolder(String path, String name) throws FileManagerException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public FileData actionDelete(String path) throws FileManagerException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public FileData actionRename(HttpServletRequest request) throws FileManagerException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public FileData actionMove(String sourcePath, String targetPath) throws FileManagerException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public FileData actionGetImage(HttpServletResponse response, String path, Boolean thumbnail) throws FileManagerException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public FileData actionEditFile(HttpServletRequest request) throws FileManagerException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public FileData actionSummarize() throws FileManagerException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public FileData actionUpload(HttpServletRequest request) throws FileManagerException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public FileData actionReplace(HttpServletRequest request) throws FileManagerException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public FileData actionSaveFile(HttpServletRequest request) throws FileManagerException {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public FileData actionExtract(HttpServletRequest request) throws FileManagerException {
-        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -306,12 +272,72 @@ public abstract class AbstractFileManager implements IFileManager {
     }
 
     @Override
-    public FileData actionReadFile(HttpServletRequest request, HttpServletResponse response) throws FileManagerException {
+    public FileData actionGetFile(String path) throws FileManagerException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public FileData actionCopy(HttpServletRequest request) throws FileManagerException {
+    public List<FileData> actionGetFolder(String path, String type) throws FileManagerException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public FileData actionAddFolder(String path, String name) throws FileManagerException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public FileData actionDelete(String path) throws FileManagerException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public FileData actionMove(String sourcePath, String targetPath) throws FileManagerException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public FileData actionGetImage(HttpServletResponse response, String path, Boolean thumbnail) throws FileManagerException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public FileData actionSummarize() throws FileManagerException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public FileData actionRename(String sourcePath, String targetPath) throws FileManagerException {
+        return null;
+    }
+
+    @Override
+    public FileData actionDownload(HttpServletResponse response, String path) throws FileManagerException {
+        return null;
+    }
+
+    @Override
+    public FileData actionEditFile(String path) throws FileManagerException {
+        return null;
+    }
+
+    @Override
+    public FileData actionReadFile(String path) throws FileManagerException {
+        return null;
+    }
+
+    @Override
+    public FileData actionUpload(String path) throws FileManagerException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public FileData actionSaveFile(String pathParam, String contentParam) throws FileManagerException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public FileData actionExtract(String sourcePath, String targetPath) throws FileManagerException {
         throw new UnsupportedOperationException();
     }
 
@@ -414,12 +440,6 @@ public abstract class AbstractFileManager implements IFileManager {
     protected final BufferedImage generateThumbnail(BufferedImage source) {
         return Scalr.resize(source, Scalr.Method.AUTOMATIC, Scalr.Mode.FIT_TO_WIDTH, Integer.parseInt(propertiesConfig.getProperty("images.thumbnail.maxWidth")), Integer.parseInt(propertiesConfig.getProperty("images.thumbnail.maxHeight")), Scalr.OP_ANTIALIAS);
     }
-
-    private static String cleanPath(String path) {
-        if (path == null) return null;
-        return path.replace("//", "/").replace("..", "");
-    }
-
 
     protected String normalizeName(String input) {
 

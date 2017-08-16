@@ -12,37 +12,39 @@ public interface IFileManager {
 
     void handleRequest(HttpServletRequest request, HttpServletResponse response);
 
+    // GET
+
     InitiateData actionInitiate() throws FileManagerException;
 
     FileData actionGetFile(String path) throws FileManagerException;
 
     List<FileData> actionGetFolder(String path, String type) throws FileManagerException;
 
-    FileData actionReadFile(HttpServletRequest request, HttpServletResponse response) throws FileManagerException;
-
-    FileData actionCopy(HttpServletRequest request) throws FileManagerException;
-
-    FileData actionDownload(HttpServletRequest request, HttpServletResponse response) throws FileManagerException;
-
-    FileData actionAddFolder(String path, String name) throws FileManagerException;
+    FileData actionMove(String sourcePath, String targetPath) throws FileManagerException;
 
     FileData actionDelete(String path) throws FileManagerException;
 
-    FileData actionRename(HttpServletRequest request) throws FileManagerException;
-
-    FileData actionMove(String sourcePath, String targetPath) throws FileManagerException;
+    FileData actionAddFolder(String path, String name) throws FileManagerException;
 
     FileData actionGetImage(HttpServletResponse response, String path, Boolean thumbnail) throws FileManagerException;
 
-    FileData actionEditFile(HttpServletRequest request) throws FileManagerException;
+    // TO DO :
+
+    FileData actionRename(String sourcePath, String targetPath) throws FileManagerException;
+
+    FileData actionDownload(HttpServletResponse response, String path) throws FileManagerException;
+
+    FileData actionEditFile(String path) throws FileManagerException;
+
+    FileData actionReadFile(String path) throws FileManagerException;
 
     FileData actionSummarize() throws FileManagerException;
 
-    FileData actionUpload(HttpServletRequest request) throws FileManagerException;
+    // POST
 
-    FileData actionReplace(HttpServletRequest request) throws FileManagerException;
+    FileData actionUpload(String path) throws FileManagerException;
 
-    FileData actionSaveFile(HttpServletRequest request) throws FileManagerException;
+    FileData actionSaveFile(String pathParam, String contentParam) throws FileManagerException;
 
-    FileData actionExtract(HttpServletRequest request) throws FileManagerException;
+    FileData actionExtract(String sourcePath, String targetPath) throws FileManagerException;
 }

@@ -29,19 +29,11 @@ public class LocalFileManager extends AbstractFileManager {
     private File docRoot;
 
     public LocalFileManager() throws FMInitializationException {
-        this(null, null);
+        this(null);
     }
 
     public LocalFileManager(Map<String, String> options) throws FMInitializationException {
-        this(null, options);
-    }
-
-    public LocalFileManager(Locale locale) throws FMInitializationException {
-        this(locale, null);
-    }
-
-    public LocalFileManager(Locale locale, Map<String, String> options) throws FMInitializationException {
-        super(locale, options);
+        super(options);
 
         String serverRoot = propertiesConfig.getProperty("serverRoot", "");
         String fileRoot = propertiesConfig.getProperty("fileRoot", "");
@@ -373,6 +365,46 @@ public class LocalFileManager extends AbstractFileManager {
         return null;
     }
 
+
+    /*
+@Override
+public FileData actionReplace(String path) throws FileManagerException {
+    File file = getFile(path);
+    File targetDirectory = new File(file.getParent());
+
+    String targetDirectoryString = path.substring(0, path.lastIndexOf("/") + 1);
+
+    if (!hasPermission("replace") || !hasPermission("upload")) {
+        return getErrorResponse("NOT_ALLOWED");
+    }
+
+    if (file.isDirectory()) {
+        return getErrorResponse("NOT_ALLOWED");
+    }
+
+    if (!isAllowedName(file.getName(), false)) {
+        return getErrorResponse("INVALID_DIRECTORY_OR_FILE");
+    }
+
+    if (!targetDirectory.canWrite()) {
+        return getErrorResponse("NOT_ALLOWED_SYSTEM");
+    }
+
+    JSONArray array = null;
+
+    array = uploadFiles(request, targetDirectoryString);
+    file.delete();
+    File thumbnail = getThumbnail(path, false);
+    if (thumbnail != null && thumbnail.exists()) {
+        thumbnail.delete();
+    }
+
+    return new JSONObject().put("data", array);
+}
+
+*/
+
+
     private String getDynamicPath(String path) {
         String fileRoot = propertiesConfig.getProperty("fileRoot");
         if (fileRoot.isEmpty()) return path;
@@ -438,7 +470,6 @@ public class LocalFileManager extends AbstractFileManager {
     }
 
     /*
-
 
     @Override
     public JSONObject actionRename(HttpServletRequest request) throws FileManagerException {
@@ -813,42 +844,6 @@ public class LocalFileManager extends AbstractFileManager {
         }
 
         return new JSONObject().put("data", new JSONObject(getFileInfo(path)));
-    }
-
-    @Override
-    public JSONObject actionReplace(HttpServletRequest request) throws FileManagerException {
-        String path = getPath(request, "path");
-        File file = getFile(path);
-        File targetDirectory = new File(file.getParent());
-
-        String targetDirectoryString = path.substring(0, path.lastIndexOf("/") + 1);
-
-        if (!hasPermission("replace") || !hasPermission("upload")) {
-            return getErrorResponse("NOT_ALLOWED");
-        }
-
-        if (file.isDirectory()) {
-            return getErrorResponse("NOT_ALLOWED");
-        }
-
-        if (!isAllowedName(file.getName(), false)) {
-            return getErrorResponse("INVALID_DIRECTORY_OR_FILE");
-        }
-
-        if (!targetDirectory.canWrite()) {
-            return getErrorResponse("NOT_ALLOWED_SYSTEM");
-        }
-
-        JSONArray array = null;
-
-        array = uploadFiles(request, targetDirectoryString);
-        file.delete();
-        File thumbnail = getThumbnail(path, false);
-        if (thumbnail != null && thumbnail.exists()) {
-            thumbnail.delete();
-        }
-
-        return new JSONObject().put("data", array);
     }
 
     @Override
