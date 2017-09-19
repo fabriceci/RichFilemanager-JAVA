@@ -53,7 +53,7 @@ public class LocalFileManager extends AbstractFileManager {
             throw new FMInitializationException("File manager root must be a directory !");
         } else if (!docRoot.exists()) {
             try {
-                Files.createDirectory(docRoot.toPath(), FileUtils.getPermissions755());
+                Files.createDirectory(docRoot.toPath());
             } catch (IOException e) {
                 throw new FMInitializationException("Unable the create the doc root directory: " + docRoot.getAbsolutePath(), e);
             }
@@ -201,7 +201,7 @@ public class LocalFileManager extends AbstractFileManager {
             throw new FileManagerException(ClientErrorMessage.DIRECTORY_ALREADY_EXISTS, Collections.singletonList(path + filename));
         }
         try {
-            Files.createDirectories(file.toPath(), FileUtils.getPermissions755());
+            Files.createDirectories(file.toPath());
         } catch (IOException e) {
             throw new FileManagerException(ClientErrorMessage.UNABLE_TO_CREATE_DIRECTORY, Collections.singletonList(path + filename));
         }
@@ -428,7 +428,7 @@ public FileData actionReplace(String path) throws FileManagerException {
 
         if (!thumbnailDirFile.exists()) {
             try {
-                Files.createDirectory(thumbnailDirFile.toPath(), FileUtils.getPermissions755());
+                Files.createDirectory(thumbnailDirFile.toPath());
             } catch(IOException e){
                 logger.error("Could not create the thumbnail directory: " + thumbnailDirFile.getAbsolutePath(), e);
                 throw new FileManagerException(ClientErrorMessage.ERROR_SERVER);

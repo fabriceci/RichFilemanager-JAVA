@@ -31,11 +31,6 @@ public class FileUtils {
         Files.walkFileTree(path, new DeleteDirectoryVisitor());
     }
 
-    public static FileAttribute<Set<PosixFilePermission>> getPermissions755(){
-        Set<PosixFilePermission> permissions = PosixFilePermissions.fromString("rwxr-xr-x");
-        return PosixFilePermissions.asFileAttribute(permissions);
-    }
-
     public static String getExtension(String filename) {
         if (filename == null) {
             return null;
