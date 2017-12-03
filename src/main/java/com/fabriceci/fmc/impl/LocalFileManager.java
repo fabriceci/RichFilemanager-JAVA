@@ -21,6 +21,8 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import static com.fabriceci.fmc.util.FileUtils.getExtension;
 
@@ -626,10 +628,6 @@ public class LocalFileManager extends AbstractFileManager {
     @Override
     public FileData actionCopy(String sourcePath, String targetDirPath) throws FileManagerException {
 
-        // security check
-        if (!targetDirPath.startsWith("/")) targetDirPath = "/" + targetDirPath;
-        if (!targetDirPath.endsWith("/")) targetDirPath += "/";
-
         File sourceFile = getFile(sourcePath);
         String filename = sourceFile.getName();
         File targetDir = getFile(targetDirPath);
@@ -682,12 +680,111 @@ public class LocalFileManager extends AbstractFileManager {
         return getFileInfo(finalPath);
     }
 
+    @Override
+    public List<FileData> actionExtract(String sourcePath, String targetPath) throws FileManagerException {
+
+        File sourceFile = getFile(sourcePath);
+        File targetDirFile = getFile(targetPath);
+
+        if(FileUtils.getExtension(sourceFile.getName()).toLowerCase().equals("zip")){
+            throw new FileManagerException(ClientErrorMessage.FORBIDDEN_ACTION_DIR);
+        }
+
+        if(sourceFile.isDirectory()){
+            throw new FileManagerException(ClientErrorMessage.FORBIDDEN_ACTION_DIR);
+        }
+
+        checkPath(sourceFile);
+        checkPath(targetDirFile, true);
+        checkRestrictions(sourceFile);
+        checkWritePermission(targetDirFile);
+        checkRestrictions(sourceFile);
+        checkRestrictions(targetDirFile);
+
+        List<FileData> fileDataList = new ArrayList<>();
+
+        try {
+
+            byte[] buffer = new byte[1024];
+            ZipInputStream zis = new ZipInputStream(new FileInputStream(sourceFile));
+            ZipEntry zipEntry = zis.getNextEntry();
+            while(zipEntry != null){
+                String fileName = zipEntry.getName();
+                File newFile = new File(targetDirFile.getAbsolutePath() + "/" + fileName);
+                if(isMatchRestriction(newFile)){
+                    fileDataList.add(getFileInfo(targetPath + newFile.getName()));
+                    FileOutputStream fos = new FileOutputStream(newFile);
+                    int len;
+                    while ((len = zis.read(buffer)) > 0) {
+                        fos.write(buffer, 0, len);
+                    }
+                    fos.close();
+                }
+                zipEntry = zis.getNextEntry();
+            }
+            zis.closeEntry();
+            zis.close();
+        } catch (IOException e) {
+            throw new FileManagerException(ClientErrorMessage.ERROR_CREATING_ZIP);
+        }
+
+        return fileDataList;
+    }
+
+    @Override
+    public Object actionSeekFolder(String folderPath, String term) throws FileManagerException {
+
+        File file = getFile(folderPath);
+
+        checkPath(file);
+        checkWritePermission(file);
+        checkReadPermission(file);
+        checkRestrictions(file);
+
+        List<FileData> fileDataList = new ArrayList();
+
+        try {
+            Files.walkFileTree(file.toPath(), new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                    try {
+
+                        File currentFile = file.toFile();
+                        if (isMatchRestriction(currentFile) && currentFile.getName().toLowerCase().startsWith(term)) {
+                            fileDataList.add(getFileInfo(getRelativePath(currentFile)));
+                        }
+
+                    } catch (FileManagerException silent) {} finally {
+                        return FileVisitResult.CONTINUE;
+                    }
+                }
+
+                @Override
+                public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                    if (exc == null) {
+                        return FileVisitResult.CONTINUE;
+                    } else {
+                        throw exc;
+                    }
+                }
+            });
+        } catch (IOException e) {
+            throw new FileManagerException(ClientErrorMessage.ERROR_SERVER);
+        }
+
+        return fileDataList;
+    }
 
     private static FileAttributes getDirSummary(Path path) throws IOException {
 
         FileAttributes fileAttributes = new FileAttributes();
 
-        Files.walkFileTree(path, new SimpleFileVisitor<>() {
+        Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
                     throws IOException {
@@ -726,6 +823,10 @@ public class LocalFileManager extends AbstractFileManager {
 
     private File getFile(String path) {
         return new File(docRoot.getPath() + path);
+    }
+
+    protected String getRelativePath(File file){
+        return file.getAbsolutePath().substring(docRoot.getAbsolutePath().length());
     }
 
     protected String getThumbnailPath(String path) throws FileManagerException {

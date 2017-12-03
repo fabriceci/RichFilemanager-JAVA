@@ -1,12 +1,40 @@
 package com.fabriceci.fmc.util;
 
+import com.fabriceci.fmc.model.FileData;
+
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 public class ZipUtils {
 
     private static final int BUFFER_SIZE = 4096;
+
+    /* unzip
+
+      public static void main(String[] args) throws IOException {
+        String fileZip = "compressed.zip";
+        byte[] buffer = new byte[1024];
+        ZipInputStream zis = new ZipInputStream(new FileInputStream(fileZip));
+        ZipEntry zipEntry = zis.getNextEntry();
+        while(zipEntry != null){
+            String fileName = zipEntry.getName();
+            File newFile = new File("unzipTest/" + fileName);
+            FileOutputStream fos = new FileOutputStream(newFile);
+            int len;
+            while ((len = zis.read(buffer)) > 0) {
+                fos.write(buffer, 0, len);
+            }
+            fos.close();
+            zipEntry = zis.getNextEntry();
+        }
+        zis.closeEntry();
+        zis.close();
+    }
+     */
 
     static public byte[] zipFolder(File dir) throws IOException {
 
@@ -15,7 +43,8 @@ public class ZipUtils {
 
         try {
             zout = new ZipOutputStream(bout);
-            addFolderToZip("", dir, zout);
+            // addFolderToZip("", dir, zout);
+            zipFile(dir, dir.getName(), zout);
             zout.close();
             return bout.toByteArray();
         } finally {
@@ -29,29 +58,29 @@ public class ZipUtils {
         }
     }
 
-    static public void zipFolder(File dir, File zipFile) throws IOException {
-
-        ZipOutputStream zout = null;
-        FileOutputStream fout = null;
-
-        try {
-            fout = new FileOutputStream(zipFile);
-            zout = new ZipOutputStream(fout);
-
-            addFolderToZip("", dir, zout);
-
-        } finally {
-            if(zout != null){
-                zout.flush();
-                zout.close();
-            }
-            if(fout != null){
-                fout.close();
-            }
+    private static void zipFile(File fileToZip, String fileName, ZipOutputStream zipOut) throws IOException {
+        if (fileToZip.isHidden()) {
+            return;
         }
+        if (fileToZip.isDirectory()) {
+            File[] children = fileToZip.listFiles();
+            for (File childFile : children) {
+                zipFile(childFile, fileName + "/" + childFile.getName(), zipOut);
+            }
+            return;
+        }
+        FileInputStream fis = new FileInputStream(fileToZip);
+        ZipEntry zipEntry = new ZipEntry(fileName);
+        zipOut.putNextEntry(zipEntry);
+        byte[] bytes = new byte[1024];
+        int length;
+        while ((length = fis.read(bytes)) >= 0) {
+            zipOut.write(bytes, 0, length);
+        }
+        fis.close();
     }
 
-
+    /*
     static private void addFileToZip(String path, String srcFile, ZipOutputStream zout) throws IOException {
 
         File folder = new File(srcFile);
@@ -86,4 +115,5 @@ public class ZipUtils {
             }
         }
     }
+    */
 }

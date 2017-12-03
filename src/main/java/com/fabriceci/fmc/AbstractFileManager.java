@@ -344,12 +344,12 @@ public abstract class AbstractFileManager implements IFileManager {
     }
 
     @Override
-    public FileData actionExtract(String sourcePath, String targetPath) throws FileManagerException {
+    public List<FileData>  actionExtract(String sourcePath, String targetPath) throws FileManagerException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Object actionSeekFolder(String path, String term) {
+    public Object actionSeekFolder(String folderPath, String term) throws FileManagerException {
         throw new UnsupportedOperationException();
     }
 
@@ -451,6 +451,12 @@ public abstract class AbstractFileManager implements IFileManager {
 
     protected void checkRestrictions(File file) throws FileManagerException {
         checkRestrictions(file.getName(), FileUtils.isDirectory(file));
+    }
+
+    protected boolean isMatchRestriction(File file) throws FileManagerException {
+        return (file.isDirectory()) ?
+                    isAllowedPattern(file.getName(), true) :
+                    isAllowedFileExtension(file.getName()) && isAllowedPattern(file.getName(), false);
     }
 
     protected final BufferedImage generateThumbnail(BufferedImage source) {

@@ -105,6 +105,18 @@ public class LocalFileManagerTest {
     }
 
     @Test
+    public void getRelativePathTest() throws IOException, FMInitializationException {
+        final LocalFileManager localFileManager = initFileManager();
+        final String temporaryFolderPath = temporaryFolder.getRoot().getAbsolutePath() + '/' + FILE_ROOT;
+
+        File test = new File(temporaryFolderPath + "/" + "test/test2/monfichier.zip");
+
+        String relativePath = localFileManager.getRelativePath(test);
+        String testS = "test";
+
+    }
+
+    @Test
     public void actionIntiate() throws IOException, FMInitializationException {
 
         final LocalFileManager localFileManager = initFileManager();

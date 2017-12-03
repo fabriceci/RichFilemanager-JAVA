@@ -1,6 +1,7 @@
 package com.fabriceci;
 
 import javax.servlet.ServletOutputStream;
+import javax.servlet.WriteListener;
 // import javax.servlet.WriteListener;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -18,5 +19,15 @@ public class StubServletOutputStream extends ServletOutputStream {
 
     public void write(int i) throws IOException {
         outputStream.write(i);
+    }
+
+    @Override
+    public boolean isReady() {
+        return true;
+    }
+
+    @Override
+    public void setWriteListener(WriteListener writeListener) {
+
     }
 }

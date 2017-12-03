@@ -30,7 +30,7 @@ public interface IFileManager {
 
     // TO test :
 
-    Object actionSeekFolder(String path, String term);
+    Object actionSeekFolder(String folderPath, String term) throws FileManagerException;
 
     FileData actionCopy(String sourcePath, String targetPath) throws FileManagerException;
 
@@ -46,9 +46,7 @@ public interface IFileManager {
 
     FileData actionSaveFile(String pathParam, String contentParam) throws FileManagerException;
 
-    // TO DO:
-
-    FileData actionExtract(String sourcePath, String targetPath) throws FileManagerException;
+    List<FileData> actionExtract(String sourcePath, String targetPath) throws FileManagerException;
 
 
 }
