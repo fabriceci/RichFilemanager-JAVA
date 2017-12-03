@@ -425,7 +425,7 @@ public abstract class AbstractFileManager implements IFileManager {
         }
     }
 
-    protected void checkRestrictions(String name, boolean isDir) throws FileManagerException {
+    private void checkRestrictions(String name, boolean isDir) throws FileManagerException {
         if (!isDir) {
             if (!isAllowedFileExtension(name)) {
                 throw new FileManagerException(ClientErrorMessage.FORBIDDEN_NAME, Collections.singletonList(name));
@@ -435,6 +435,10 @@ public abstract class AbstractFileManager implements IFileManager {
         if (!isAllowedPattern(name, isDir)) {
             throw new FileManagerException(ClientErrorMessage.INVALID_FILE_TYPE, Collections.singletonList(name));
         }
+    }
+
+    protected void checkRestrictions(File file) throws FileManagerException {
+        checkRestrictions(file.getName(), FileUtils.isDirectory(file));
     }
 
     protected final BufferedImage generateThumbnail(BufferedImage source) {

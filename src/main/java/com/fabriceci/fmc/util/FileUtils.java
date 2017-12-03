@@ -20,6 +20,22 @@ public class FileUtils {
     private static final char EXTENSION_SEPARATOR = '.';
     private static final int BUFFER_SIZE = 4096;
 
+    /**
+     *
+     * @param file
+     * @return true if the file is a directory (existing or not)
+     */
+    public static boolean isDirectory(File file) {
+
+        // check if the file/directory is already there
+        if (!file.exists()) {
+            // see if the file portion it doesn't have an extension
+            return file.getName().lastIndexOf('.') == -1;
+        } else {
+            // see if the path that's already in place is a file or directory
+            return file.isDirectory();
+        }
+    }
 
     public static void copyDirectory(Path source, Path target) throws IOException
     {

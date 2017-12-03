@@ -24,7 +24,7 @@ task fatJar(type: Jar) {
 }
 
 dependencies {
-    compileOnly('javax.servlet:servlet-api:2.5')
+    compileOnly('javax.servlet:javax.servlet-api:3.0.1')
     compile('org.slf4j:slf4j-api:1.7.+')
     compile('org.imgscalr:imgscalr-lib:4.+')
     compile('com.google.code.gson:gson:2.8.+')

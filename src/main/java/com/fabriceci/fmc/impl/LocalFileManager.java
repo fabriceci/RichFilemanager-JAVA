@@ -72,7 +72,7 @@ public class LocalFileManager extends AbstractFileManager {
             throw new FileManagerException(ClientErrorMessage.DIRECTORY_NOT_EXIST, Collections.singletonList(path));
         }
 
-        checkRestrictions(dir.getName(), true);
+        checkRestrictions(dir);
 
         String[] files;
         try {
@@ -112,15 +112,13 @@ public class LocalFileManager extends AbstractFileManager {
 
         File file = new File(docRoot.getPath() + path);
 
-        String filename = file.getName();
-
         if (file.isDirectory()) {
             throw new FileManagerException(ClientErrorMessage.FORBIDDEN_ACTION_DIR);
         }
 
         checkPath(file);
         checkReadPermission(file);
-        checkRestrictions(filename, false);
+        checkRestrictions(file);
 
         // check if file is readable
         if (!file.canRead()) {
@@ -187,21 +185,21 @@ public class LocalFileManager extends AbstractFileManager {
 
         String filename = normalizeName(name);
         File parentFile = new File(docRoot.getPath() + path);
-        File file = new File(docRoot.getPath() + path + filename);
+        File targetFolderFile = new File(docRoot.getPath() + path + filename);
 
         checkPath(parentFile);
         checkWritePermission(parentFile);
-        checkRestrictions(name, true);
+        checkRestrictions(targetFolderFile);
 
         if (filename.length() == 0) {
             throw new FileManagerException(ClientErrorMessage.FORBIDDEN_NAME, Collections.singletonList(name));
         }
 
-        if (file.isDirectory()) {
+        if (targetFolderFile.isDirectory()) {
             throw new FileManagerException(ClientErrorMessage.DIRECTORY_ALREADY_EXISTS, Collections.singletonList(path + filename));
         }
         try {
-            Files.createDirectories(file.toPath());
+            Files.createDirectories(targetFolderFile.toPath());
         } catch (IOException e) {
             throw new FileManagerException(ClientErrorMessage.UNABLE_TO_CREATE_DIRECTORY, Collections.singletonList(path + filename));
         }
@@ -234,8 +232,8 @@ public class LocalFileManager extends AbstractFileManager {
         checkReadPermission(sourceFile);
         checkWritePermission(sourceFile);
         checkWritePermission(targetDir);
-        checkRestrictions(sourceFile.getName(), false);
-        checkRestrictions(targetFile.getName(), true);
+        checkRestrictions(sourceFile);
+        checkRestrictions(targetFile);
 
         // check if file already exists
         if (targetFile.exists()) {
@@ -273,6 +271,75 @@ public class LocalFileManager extends AbstractFileManager {
         return getFileInfo(finalPath);
     }
 
+
+    @Override
+    public FileData actionRename(String sourcePath, String targetName) throws FileManagerException {
+        return null;
+
+        /*
+        File sourceFile = getFile(sourcePath);
+        String filename = sourceFile.getName();
+
+        int pathPos = sourcePath.lastIndexOf("/");
+        String targetDirPath = sourcePath.substring(0, pathPos + 1);
+
+        File targetDir = new File(targetDirPath);
+
+        String targetPath = targetDirPath + targetName;
+
+        File targetFile = new File(targetPath);
+
+        // forbid to change path during rename
+        if(targetName.indexOf("/") != -1){
+            throw new FileManagerException(ClientErrorMessage.FORBIDDEN_CHAR_SLASH);
+        }
+
+        // check if not requesting main FM userfiles folder
+        if (sourceFile.equals(docRoot)) {
+            throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED);
+        }
+
+        // check permissions
+        checkPath(sourceFile);
+        checkReadPermission(sourceFile);
+        checkWritePermission(sourceFile);
+        checkWritePermission(targetDir);
+        checkRestrictions(sourceFile);
+        checkRestrictions(targetFile);
+
+
+
+
+
+        if (fileTo.exists()) {
+            if (fileTo.isDirectory()) {
+                return getErrorResponse("DIRECTORY_ALREADY_EXISTS", new String[] {targetName});
+            } else { // fileTo.isFile
+                return getErrorResponse("FILE_ALREADY_EXISTS", new String[] {targetName});
+            }
+        } else if (!sourceFile.renameTo(fileTo)) {
+
+            if (sourceFile.isDirectory()) {
+                return getErrorResponse("ERROR_RENAMING_DIRECTORY", new String[] { filename, targetName});
+            } else {
+                return getErrorResponse("ERROR_RENAMING_FILE", new String[] {filename, targetName});
+            }
+        }
+
+        File oldThumbnailFile = new File(getThumbnailPath(sourcePath));
+        if (oldThumbnailFile.exists()) {
+            oldThumbnailFile.renameTo(new File(getThumbnailPath(targetPath)));
+        }
+
+        if (fileTo.isDirectory()) {
+            if (!targetPath.endsWith("/"))
+                targetPath = targetPath + "/";
+        }
+
+        return new JSONObject().put("data", new JSONObject(getFileInfo(targetPath)));
+        */
+    }
+
     @Override
     public FileData actionDelete(String path) throws FileManagerException {
 
@@ -281,7 +348,7 @@ public class LocalFileManager extends AbstractFileManager {
 
         checkPath(file);
         checkWritePermission(file);
-        checkRestrictions(path, file.isDirectory());
+        checkRestrictions(file);
 
         // check if not requesting main FM userfiles folder
         if (file.equals(docRoot)) {
@@ -317,13 +384,13 @@ public class LocalFileManager extends AbstractFileManager {
 
         checkPath(file);
         checkReadPermission(file);
-        checkRestrictions(path, file.isDirectory());
+        checkRestrictions(file);
 
         if (file.isDirectory()) {
             throw new FileManagerException(ClientErrorMessage.FORBIDDEN_ACTION_DIR);
         }
 
-        checkRestrictions(path, file.isDirectory());
+        checkRestrictions(file);
 
         try {
             String filename = file.getName();
@@ -416,11 +483,11 @@ public FileData actionReplace(String path) throws FileManagerException {
         return new File(docRoot.getPath() + path);
     }
 
-    public String getThumbnailPath(String path) throws FileManagerException {
+    protected String getThumbnailPath(String path) throws FileManagerException {
         return getThumbnailDir().getPath() + path;
     }
 
-    public File getThumbnailDir() throws FileManagerException {
+    protected File getThumbnailDir() throws FileManagerException {
 
         final String serverRoot = propertiesConfig.getProperty("serverRoot", "");
         final String thumbnailDirPath = propertiesConfig.getProperty("images.thumbnail.dir");
@@ -438,7 +505,7 @@ public FileData actionReplace(String path) throws FileManagerException {
         return thumbnailDirFile;
     }
 
-    public File getThumbnail(String path, boolean create) throws FileManagerException, IOException {
+    protected File getThumbnail(String path, boolean create) throws FileManagerException, IOException {
 
         File thumbnailFile = new File(getThumbnailPath(path));
 
@@ -469,83 +536,10 @@ public FileData actionReplace(String path) throws FileManagerException {
         return thumbnailFile;
     }
 
+
+
+
     /*
-
-    @Override
-    public JSONObject actionRename(HttpServletRequest request) throws FileManagerException {
-
-        String sourcePath = getPath(request, "old");
-        if (sourcePath.endsWith("/")) {
-            sourcePath = sourcePath.substring(0, (sourcePath.length() - 1));
-        }
-
-        String targetName = StringUtils.normalize(request.getParameter("new"));
-
-        // get the path
-        int pathPos = sourcePath.lastIndexOf("/");
-        String path = sourcePath.substring(0, pathPos + 1);
-        String targetPath = path + targetName;
-
-        File sourceFile = getFile(sourcePath);
-        File fileTo = getFile(targetPath);
-
-        String filename = sourceFile.getName();
-
-        if (!hasPermission("rename")) {
-            return getErrorResponse("NOT_ALLOWED");
-        }
-
-        if (!sourceFile.exists()) {
-            return getErrorResponse("NOT_ALLOWED_SYSTEM");
-        }
-
-        // check if file is writable
-        if (!sourceFile.canWrite()) {
-            return getErrorResponse("NOT_ALLOWED_SYSTEM");
-        }
-
-        // check if not requesting main FM userfiles folder
-        if (sourceFile.equals(docRoot)) {
-            return getErrorResponse("NOT_ALLOWED");
-        }
-
-        if (!sourceFile.isDirectory()) {
-            if (!isAllowedFileType(targetName)) {
-                return getErrorResponse("INVALID_FILE_TYPE");
-            }
-        }
-
-        if (!isAllowedName(targetName, false)) {
-            return getErrorResponse("FORBIDDEN_NAME", new String[] {targetName});
-        }
-
-        if (fileTo.exists()) {
-            if (fileTo.isDirectory()) {
-                return getErrorResponse("DIRECTORY_ALREADY_EXISTS", new String[] {targetName});
-            } else { // fileTo.isFile
-                return getErrorResponse("FILE_ALREADY_EXISTS", new String[] {targetName});
-            }
-        } else if (!sourceFile.renameTo(fileTo)) {
-
-            if (sourceFile.isDirectory()) {
-                return getErrorResponse("ERROR_RENAMING_DIRECTORY", new String[] { filename, targetName});
-            } else {
-                return getErrorResponse("ERROR_RENAMING_FILE", new String[] {filename, targetName});
-            }
-        }
-
-        File oldThumbnailFile = new File(getThumbnailPath(sourcePath));
-        if (oldThumbnailFile.exists()) {
-            oldThumbnailFile.renameTo(new File(getThumbnailPath(targetPath)));
-        }
-
-        if (fileTo.isDirectory()) {
-            if (!targetPath.endsWith("/"))
-                targetPath = targetPath + "/";
-        }
-
-        return new JSONObject().put("data", new JSONObject(getFileInfo(targetPath)));
-    }
 
     @Override
     public JSONObject actionDownload(HttpServletRequest request, HttpServletResponse response) throws FileManagerException {
