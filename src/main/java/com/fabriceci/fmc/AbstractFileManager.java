@@ -117,21 +117,35 @@ public abstract class AbstractFileManager implements IFileManager {
                     case "initiate":
                         responseData = actionInitiate();
                         break;
-                    case "getfile":
+                    case "getinfo":
                         if (!StringUtils.isEmpty(pathParam)) {
-                            responseData = actionGetFile(pathParam);
+                            responseData = actionGetInfo(pathParam);
                         }
                         break;
-                    case "getfolder":
+                    case "readfolder":
                         final String typeParam = request.getParameter("type");
                         if (!StringUtils.isEmpty(pathParam)) {
-                            responseData = actionGetFolder(pathParam, typeParam);
+                            responseData = actionReadFolder(pathParam, typeParam);
                         }
                         break;
-                    case "addfolder":
-                        final String name = request.getParameter("name");
-                        if (!StringUtils.isEmpty(pathParam) && !StringUtils.isEmpty(name)) {
-                            responseData = actionAddFolder(pathParam, name);
+                    case "seekfolder":
+                        final String searchTerm = request.getParameter("string");
+                        if (!StringUtils.isEmpty(pathParam) && !StringUtils.isEmpty(searchTerm)) {
+                            responseData = actionAddFolder(pathParam, searchTerm);
+                        }
+                        break;
+                    case "rename":
+                        sourcePath = cleanPath(request.getParameter("old"));
+                        targetPath = cleanPath(request.getParameter("new"));
+                        if (!StringUtils.isEmpty(sourcePath) && !StringUtils.isEmpty(targetPath)) {
+                            responseData = actionRename(sourcePath, targetPath);
+                        }
+                        break;
+                    case "copy":
+                        sourcePath = cleanPath(request.getParameter("old"));
+                        targetPath = cleanPath(request.getParameter("new"));
+                        if (!StringUtils.isEmpty(sourcePath) && !StringUtils.isEmpty(targetPath)) {
+                            responseData = actionCopy(sourcePath, targetPath);
                         }
                         break;
                     case "move":
@@ -146,18 +160,10 @@ public abstract class AbstractFileManager implements IFileManager {
                             responseData = actionDelete(pathParam);
                         }
                         break;
-                    case "getimage":
-                        if (!StringUtils.isEmpty(pathParam)) {
-                            Boolean thumbnail = Boolean.parseBoolean(request.getParameter("thumbnail"));
-                            responseData = actionGetImage(response, pathParam, thumbnail);
-                        }
-                        break;
-                    // TO DO :
-                    case "rename":
-                        sourcePath = cleanPath(request.getParameter("old"));
-                        targetPath = cleanPath(request.getParameter("new"));
-                        if (!StringUtils.isEmpty(sourcePath) && !StringUtils.isEmpty(targetPath)) {
-                            responseData = actionRename(sourcePath, targetPath);
+                    case "addfolder":
+                        final String name = request.getParameter("name");
+                        if (!StringUtils.isEmpty(pathParam) && !StringUtils.isEmpty(name)) {
+                            responseData = actionAddFolder(pathParam, name);
                         }
                         break;
                     case "download":
@@ -165,14 +171,15 @@ public abstract class AbstractFileManager implements IFileManager {
                             responseData = actionDownload(response, pathParam);
                         }
                         break;
-                    case "editfile":
+                    case "getimage":
                         if (!StringUtils.isEmpty(pathParam)) {
-                            responseData = actionEditFile(pathParam);
+                            Boolean thumbnail = Boolean.parseBoolean(request.getParameter("thumbnail"));
+                            responseData = actionGetImage(response, pathParam, thumbnail);
                         }
                         break;
                     case "readfile" :
                         if (!StringUtils.isEmpty(pathParam)) {
-                            responseData = actionEditFile(pathParam);
+                            responseData = actionReadFile(response, pathParam);
                         }
                         break;
                     case "summarize" :
@@ -185,7 +192,7 @@ public abstract class AbstractFileManager implements IFileManager {
                         throw new FileManagerException(ClientErrorMessage.MODE_ERROR);
                     case "upload":
                         if (!StringUtils.isEmpty(pathParam)) {
-                            responseData = actionUpload(pathParam);
+                            responseData = actionUpload(request, pathParam);
                         }
                         break;
                     case "savefile":
@@ -272,12 +279,12 @@ public abstract class AbstractFileManager implements IFileManager {
     }
 
     @Override
-    public FileData actionGetFile(String path) throws FileManagerException {
+    public FileData actionGetInfo(String path) throws FileManagerException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public List<FileData> actionGetFolder(String path, String type) throws FileManagerException {
+    public List<FileData> actionReadFolder(String path, String type) throws FileManagerException {
         throw new UnsupportedOperationException();
     }
 
@@ -308,26 +315,26 @@ public abstract class AbstractFileManager implements IFileManager {
 
     @Override
     public FileData actionRename(String sourcePath, String targetPath) throws FileManagerException {
-        return null;
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public FileData actionCopy(String sourcePath, String targetPath) throws FileManagerException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public FileData actionReadFile(HttpServletResponse response, String path) throws FileManagerException {
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public FileData actionDownload(HttpServletResponse response, String path) throws FileManagerException {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public FileData actionEditFile(String path) throws FileManagerException {
-        return null;
-    }
-
-    @Override
-    public FileData actionReadFile(String path) throws FileManagerException {
-        return null;
-    }
-
-    @Override
-    public FileData actionUpload(String path) throws FileManagerException {
+    public List<FileData> actionUpload(HttpServletRequest request, String path) throws FileManagerException {
         throw new UnsupportedOperationException();
     }
 
@@ -338,6 +345,11 @@ public abstract class AbstractFileManager implements IFileManager {
 
     @Override
     public FileData actionExtract(String sourcePath, String targetPath) throws FileManagerException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Object actionSeekFolder(String path, String term) {
         throw new UnsupportedOperationException();
     }
 

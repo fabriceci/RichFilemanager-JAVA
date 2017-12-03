@@ -16,9 +16,9 @@ public interface IFileManager {
 
     InitiateData actionInitiate() throws FileManagerException;
 
-    FileData actionGetFile(String path) throws FileManagerException;
+    FileData actionGetInfo(String path) throws FileManagerException;
 
-    List<FileData> actionGetFolder(String path, String type) throws FileManagerException;
+    List<FileData> actionReadFolder(String path, String type) throws FileManagerException;
 
     FileData actionMove(String sourcePath, String targetPath) throws FileManagerException;
 
@@ -28,23 +28,27 @@ public interface IFileManager {
 
     FileData actionGetImage(HttpServletResponse response, String path, Boolean thumbnail) throws FileManagerException;
 
-    // TO DO :
+    // TO test :
+
+    Object actionSeekFolder(String path, String term);
+
+    FileData actionCopy(String sourcePath, String targetPath) throws FileManagerException;
 
     FileData actionRename(String sourcePath, String targetPath) throws FileManagerException;
 
-    FileData actionDownload(HttpServletResponse response, String path) throws FileManagerException;
-
-    FileData actionEditFile(String path) throws FileManagerException;
-
-    FileData actionReadFile(String path) throws FileManagerException;
+    FileData actionReadFile(HttpServletResponse response, String path) throws FileManagerException;
 
     FileData actionSummarize() throws FileManagerException;
 
-    // POST
+    FileData actionDownload(HttpServletResponse response, String path) throws FileManagerException;
 
-    FileData actionUpload(String path) throws FileManagerException;
+    List<FileData> actionUpload(HttpServletRequest request, String path) throws FileManagerException;
 
     FileData actionSaveFile(String pathParam, String contentParam) throws FileManagerException;
 
+    // TO DO:
+
     FileData actionExtract(String sourcePath, String targetPath) throws FileManagerException;
+
+
 }

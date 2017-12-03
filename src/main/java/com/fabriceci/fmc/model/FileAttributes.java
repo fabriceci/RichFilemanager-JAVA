@@ -13,7 +13,9 @@ public class FileAttributes {
     private Double width;
     private Long size;
     private String content;
+    private Long files;
 
+    private Long folders;
 
     public String getContent() {
         return content;
@@ -109,5 +111,21 @@ public class FileAttributes {
 
     public boolean isWritable(){
         return this.writable == 1;
+    }
+
+    public Long getFiles() {
+        return files;
+    }
+
+    public void setFiles(Long files) {
+        this.files = files;
+    }
+
+    public Long getFolders() {
+        return folders;
+    }
+
+    public void setFolders(Long folders) {
+        this.folders = folders;
     }
 }

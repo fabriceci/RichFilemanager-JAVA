@@ -2,7 +2,8 @@ package com.fabriceci.fmc.model;
 
 public enum FileType {
     file ("file"),
-    folder ("folder");
+    folder ("folder"),
+    summary ("summary");
 
     private final String name;
 

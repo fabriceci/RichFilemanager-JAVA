@@ -1,5 +1,7 @@
 package com.fabriceci.fmc.util;
 
+import com.apple.eio.FileManager;
+import com.fabriceci.fmc.error.FileManagerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +37,36 @@ public class FileUtils {
             // see if the path that's already in place is a file or directory
             return file.isDirectory();
         }
+    }
+
+    public static String humanReadableByteCount(long bytes, boolean si) {
+        int unit = si ? 1000 : 1024;
+        if (bytes < unit) return bytes + " B";
+        int exp = (int) (Math.log(bytes) / Math.log(unit));
+        String pre = (si ? "kMGTPE" : "KMGTPE").charAt(exp-1) + (si ? "" : "i");
+        return String.format("%.1f %sB", bytes / Math.pow(unit, exp), pre);
+    }
+
+    public static String readFile(File file) throws FileManagerException {
+
+        BufferedReader br = null;
+        StringBuilder sb = new StringBuilder();
+        try {
+            br = new BufferedReader(new FileReader(file));
+            for (String line; (line = br.readLine()) != null; ) {
+                sb.append(line);
+                sb.append('\n');
+            }
+        } catch (IOException e) {
+            throw new FileManagerException("Error reading the file " + file.getAbsolutePath(), e);
+        } finally {
+            if (br != null) {
+                try {
+                    br.close();
+                } catch (Exception ignore) {}
+            }
+        }
+        return sb.toString();
     }
 
     public static void copyDirectory(Path source, Path target) throws IOException
