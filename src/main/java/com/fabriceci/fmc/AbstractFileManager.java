@@ -34,7 +34,6 @@ public abstract class AbstractFileManager implements IFileManager {
     protected final Logger logger = LoggerFactory.getLogger(AbstractFileManager.class);
     protected boolean readOnly = false;
     protected Properties propertiesConfig = new Properties();
-    protected DateFormat df;
 
     public AbstractFileManager(Map<String, String> options) {
         // load server properties
@@ -66,13 +65,6 @@ public abstract class AbstractFileManager implements IFileManager {
                 tempLoadIS.close();
             } catch (IOException ignored) {
             }
-        }
-
-        try {
-            df = new SimpleDateFormat(propertiesConfig.getProperty("dateFormat"), new Locale("en"));
-        } catch (IllegalArgumentException e) {
-            logger.error("The date format is not valid - setting the default one instead : yyyy-MM-dd HH:mm:ss");
-            df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", new Locale("en"));
         }
 
         if (options != null && !options.isEmpty()) {
