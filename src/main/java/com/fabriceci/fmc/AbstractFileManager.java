@@ -131,7 +131,7 @@ public abstract class AbstractFileManager implements IFileManager {
                     case "seekfolder":
                         final String searchTerm = request.getParameter("string");
                         if (!StringUtils.isEmpty(pathParam) && !StringUtils.isEmpty(searchTerm)) {
-                            responseData = actionAddFolder(pathParam, searchTerm);
+                            responseData = actionSeekFolder(pathParam, searchTerm);
                         }
                         break;
                     case "rename":
@@ -142,8 +142,8 @@ public abstract class AbstractFileManager implements IFileManager {
                         }
                         break;
                     case "copy":
-                        sourcePath = cleanPath(request.getParameter("old"));
-                        targetPath = cleanPath(request.getParameter("new"));
+                        sourcePath = cleanPath(request.getParameter("source"));
+                        targetPath = cleanPath(request.getParameter("target"));
                         if (!StringUtils.isEmpty(sourcePath) && !StringUtils.isEmpty(targetPath)) {
                             responseData = actionCopy(sourcePath, targetPath);
                         }
@@ -227,7 +227,7 @@ public abstract class AbstractFileManager implements IFileManager {
     }
 
     private void generateErrorResponse(HttpServletResponse response, String message, List<String> arguments) {
-        response.setStatus(200);
+        response.setStatus(500);
         response.addHeader("Content-Type", "application/json; charset=utf-8");
 
         Gson gson = new GsonBuilder().create();

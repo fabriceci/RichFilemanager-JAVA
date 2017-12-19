@@ -6,26 +6,21 @@ public class ErrorItem {
 
     private String id;
     private int code;
-    private String message;
-    private List<String> arguments;
+    private String title;
+    private ErrorMeta meta;
 
-    public ErrorItem(String message) {
-        this(message, null);
+    public ErrorItem(String title) {
+        this(title, null);
     }
 
     public ErrorItem(String message, List<String> arguments) {
         this.id = "server";
         this.code = 500;
-        this.message = message;
-        this.arguments = arguments;
-    }
-
-    public List<String> getArguments() {
-        return arguments;
-    }
-
-    public void setArguments(List<String> arguments) {
-        this.arguments = arguments;
+        this.title = message;
+        this.meta = new ErrorMeta();
+        if(arguments!= null) {
+            this.meta.setArguments(arguments);
+        }
     }
 
     public String getId() {
@@ -44,11 +39,11 @@ public class ErrorItem {
         this.code = code;
     }
 
-    public String getMessage() {
-        return message;
+    public String getTitle() {
+        return title;
     }
 
-    public void setMessage(String message) {
-        this.message = message;
+    public void setTitle(String message) {
+        this.title = message;
     }
 }

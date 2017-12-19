@@ -6,9 +6,8 @@ public class FileAttributes {
     private String path;
     private int readable = 1;
     private int writable = 1;
-    private String created;
-    private String modified;
-    private Long timestamp;
+    private Long created;
+    private Long modified;
     private Double height;
     private Double width;
     private Long size;
@@ -25,19 +24,19 @@ public class FileAttributes {
         this.content = content;
     }
 
-    public String getCreated() {
+    public Long getCreated() {
         return created;
     }
 
-    public void setCreated(String created) {
+    public void setCreated(Long created) {
         this.created = created;
     }
 
-    public String getModified() {
+    public Long getModified() {
         return modified;
     }
 
-    public void setModified(String modified) {
+    public void setModified(Long modified) {
         this.modified = modified;
     }
 
@@ -63,14 +62,6 @@ public class FileAttributes {
 
     public void setSize(Long size) {
         this.size = size;
-    }
-
-    public Long getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(Long timestamp) {
-        this.timestamp = timestamp;
     }
 
     public Double getHeight() {

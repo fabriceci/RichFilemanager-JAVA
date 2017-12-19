@@ -173,9 +173,9 @@ public class LocalFileManager extends AbstractFileManager {
 
         fileAttributes.setName(filename);
         fileAttributes.setPath(getDynamicPath(path));
-        fileAttributes.setTimestamp(attr.lastModifiedTime().toMillis());
-        fileAttributes.setModified(df.format(new Date(attr.lastModifiedTime().toMillis())));
-        fileAttributes.setCreated(df.format(new Date(attr.creationTime().toMillis())));
+
+        fileAttributes.setModified(attr.lastModifiedTime().toMillis() / 1000);
+        fileAttributes.setCreated(attr.creationTime().toMillis() / 1000);
 
         fileData.setAttributes(fileAttributes);
 
@@ -380,11 +380,11 @@ public class LocalFileManager extends AbstractFileManager {
 
         int pathPos = sourcePath.lastIndexOf("/");
         String targetDirPath = sourcePath.substring(0, pathPos + 1);
-        File targetDir = new File(targetDirPath);
+        File targetDir = getFile(targetDirPath);
 
         String targetPath = targetDirPath + targetName;
 
-        File targetFile = new File(targetPath);
+        File targetFile = getFile(targetPath);
 
         // forbid to change path during rename
         if (targetName.contains("/")) {
@@ -407,9 +407,9 @@ public class LocalFileManager extends AbstractFileManager {
 
         if (!sourceFile.renameTo(targetFile)) {
             if (sourceFile.isDirectory()) {
-                throw new FileManagerException(ClientErrorMessage.ERROR_RENAMING_DIRECTORY, Arrays.asList(sourcePath, targetPath));
+                throw new FileManagerException(ClientErrorMessage.ERROR_RENAMING_DIRECTORY, Arrays.asList(FileUtils.getBaseName(sourcePath), targetName));
             } else {
-                throw new FileManagerException(ClientErrorMessage.ERROR_RENAMING_FILE, Arrays.asList(sourcePath, targetPath));
+                throw new FileManagerException(ClientErrorMessage.ERROR_RENAMING_FILE, Arrays.asList(FileUtils.getBaseName(sourcePath), targetName));
             }
         }
 
@@ -686,7 +686,7 @@ public class LocalFileManager extends AbstractFileManager {
         File sourceFile = getFile(sourcePath);
         File targetDirFile = getFile(targetPath);
 
-        if(FileUtils.getExtension(sourceFile.getName()).toLowerCase().equals("zip")){
+        if(!FileUtils.getExtension(sourceFile.getName()).toLowerCase().equals("zip")){
             throw new FileManagerException(ClientErrorMessage.FORBIDDEN_ACTION_DIR);
         }
 
@@ -702,6 +702,7 @@ public class LocalFileManager extends AbstractFileManager {
         checkRestrictions(targetDirFile);
 
         List<FileData> fileDataList = new ArrayList<>();
+        List<String> levelOneFiles = new ArrayList<>();
 
         try {
 
@@ -712,13 +713,35 @@ public class LocalFileManager extends AbstractFileManager {
                 String fileName = zipEntry.getName();
                 File newFile = new File(targetDirFile.getAbsolutePath() + "/" + fileName);
                 if(isMatchRestriction(newFile)){
-                    fileDataList.add(getFileInfo(targetPath + newFile.getName()));
-                    FileOutputStream fos = new FileOutputStream(newFile);
-                    int len;
-                    while ((len = zis.read(buffer)) > 0) {
-                        fos.write(buffer, 0, len);
+
+                    newFile.getParentFile().mkdirs();
+                    if (!zipEntry.isDirectory() && !FileUtils.getBaseName(fileName).startsWith(".")) {
+
+                        if(newFile.exists() || newFile.isDirectory()){
+                            newFile.delete();
+                        }
+                        newFile.createNewFile();
+                        FileOutputStream fos = new FileOutputStream(newFile);
+                        int len;
+                        while ((len = zis.read(buffer)) > 0) {
+                            fos.write(buffer, 0, len);
+                        }
+                        fos.close();
+
+                    } else if(zipEntry.isDirectory()){
+                        newFile.mkdir();
                     }
-                    fos.close();
+
+                    if(!FileUtils.getBaseName(fileName).startsWith(".")) {
+                        int count = fileName.length() - fileName.replace("/", "").length();
+                        if(count < 1 || (count == 1 && fileName.endsWith("/")) ) {
+                            String path = getRelativePath(newFile);
+                            if(zipEntry.isDirectory()){
+                                path += "/";
+                            }
+                            fileDataList.add(getFileInfo(path));
+                        }
+                    }
                 }
                 zipEntry = zis.getNextEntry();
             }
@@ -741,7 +764,8 @@ public class LocalFileManager extends AbstractFileManager {
         checkReadPermission(file);
         checkRestrictions(file);
 
-        List<FileData> fileDataList = new ArrayList();
+        final List<FileData> fileDataList = new ArrayList();
+        final String searchedTerm = term;
 
         try {
             Files.walkFileTree(file.toPath(), new SimpleFileVisitor<Path>() {
@@ -750,7 +774,7 @@ public class LocalFileManager extends AbstractFileManager {
                     try {
 
                         File currentFile = file.toFile();
-                        if (isMatchRestriction(currentFile) && currentFile.getName().toLowerCase().startsWith(term)) {
+                        if (isMatchRestriction(currentFile) && currentFile.getName().toLowerCase().startsWith(searchedTerm.toLowerCase())) {
                             fileDataList.add(getFileInfo(getRelativePath(currentFile)));
                         }
 
@@ -767,6 +791,12 @@ public class LocalFileManager extends AbstractFileManager {
                 @Override
                 public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
                     if (exc == null) {
+                        try{
+                        File currentFile = dir.toFile();
+                        if (isMatchRestriction(currentFile) && currentFile.getName().toLowerCase().startsWith(searchedTerm.toLowerCase())) {
+                            fileDataList.add(getFileInfo(getRelativePath(currentFile) + "/"));
+                        }
+                        } catch (FileManagerException silent) {} finally {}
                         return FileVisitResult.CONTINUE;
                     } else {
                         throw exc;
@@ -782,7 +812,10 @@ public class LocalFileManager extends AbstractFileManager {
 
     private static FileAttributes getDirSummary(Path path) throws IOException {
 
-        FileAttributes fileAttributes = new FileAttributes();
+        final FileAttributes fileAttributes = new FileAttributes();
+        fileAttributes.setFiles(0L);
+        fileAttributes.setSize(0L);
+        fileAttributes.setFolders(0L);
 
         Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
             @Override
