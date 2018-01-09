@@ -1,12 +1,10 @@
 package com.fabriceci.fmc.util;
 
-import com.fabriceci.fmc.model.FileData;
-
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 public class ZipUtils {

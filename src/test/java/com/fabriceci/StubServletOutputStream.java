@@ -2,10 +2,11 @@ package com.fabriceci;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.WriteListener;
-// import javax.servlet.WriteListener;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+
+// import javax.servlet.WriteListener;
 
 public class StubServletOutputStream extends ServletOutputStream {
 
