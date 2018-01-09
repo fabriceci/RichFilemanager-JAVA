@@ -37,19 +37,14 @@ public class LocalFileManager extends AbstractFileManager {
     public LocalFileManager(Map<String, String> options) throws FMInitializationException {
         super(options);
 
-        String serverRoot = propertiesConfig.getProperty("serverRoot", "");
         String fileRoot = propertiesConfig.getProperty("fileRoot", "");
 
-        if (!serverRoot.isEmpty() && serverRoot.endsWith("/")) {
-            serverRoot = serverRoot.substring(0, serverRoot.length() - 1);
-            propertiesConfig.setProperty("serverRoot", serverRoot);
-        }
         if (!fileRoot.isEmpty() && fileRoot.endsWith("/")) {
             fileRoot = fileRoot.substring(0, fileRoot.length() - 1);
             propertiesConfig.setProperty("fileRoot", fileRoot);
         }
 
-        docRoot = new File(serverRoot.isEmpty() ? fileRoot : serverRoot + '/' + fileRoot);
+        docRoot = new File(fileRoot).getAbsoluteFile();
 
         if (docRoot.exists() && docRoot.isFile()) {
             throw new FMInitializationException("File manager root must be a directory !");
@@ -868,9 +863,15 @@ public class LocalFileManager extends AbstractFileManager {
 
     protected File getThumbnailDir() throws FileManagerException {
 
-        final String serverRoot = propertiesConfig.getProperty("serverRoot", "");
+        final String fileRoot = propertiesConfig.getProperty("fileRoot", "");
         final String thumbnailDirPath = propertiesConfig.getProperty("images.thumbnail.dir");
-        File thumbnailDirFile = new File(StringUtils.isEmpty(serverRoot) ? thumbnailDirPath : serverRoot + '/' + thumbnailDirPath);
+        final String thumbnailDefaultDirName = "_thumbs";
+        File thumbnailDirFile = null;
+        if(!StringUtils.isEmpty(thumbnailDirPath)){
+            thumbnailDirFile = new File(thumbnailDirPath);
+        } else{
+            thumbnailDirFile = new File(StringUtils.isEmpty(fileRoot) ? thumbnailDefaultDirName: fileRoot + '/' + thumbnailDefaultDirName);
+        }
 
         if (!thumbnailDirFile.exists()) {
             try {
