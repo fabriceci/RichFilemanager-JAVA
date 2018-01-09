@@ -95,9 +95,7 @@ public class LocalFileManagerTest {
             temporaryFolder.newFolder(FILE_ROOT);
         }
         Map<String, String> options = new HashMap<>();
-        options.put("serverRoot", temporaryFolder.getRoot().getAbsolutePath());
-        options.put("fileRoot", FILE_ROOT);
-        options.put("images.thumbnail.dir", THUMBNAIL_DIR);
+        options.put("fileRoot", temporaryFolder.getRoot().getAbsolutePath() + '/' + FILE_ROOT);
         if (extraOptions != null) {
             options.putAll(extraOptions);
         }
@@ -109,10 +107,10 @@ public class LocalFileManagerTest {
         final LocalFileManager localFileManager = initFileManager();
         final String temporaryFolderPath = temporaryFolder.getRoot().getAbsolutePath() + '/' + FILE_ROOT;
 
-        File test = new File(temporaryFolderPath + "/" + "test/test2/monfichier.zip");
+        File test = new File(temporaryFolderPath + "/test/test2/monfichier.zip");
 
         String relativePath = localFileManager.getRelativePath(test);
-        String testS = "test";
+        assertEquals("/test/test2/monfichier.zip" , relativePath);
 
     }
 
@@ -157,14 +155,14 @@ public class LocalFileManagerTest {
 
         // test sample txt
         given(resp.getWriter()).willReturn(writer);
-        given(req.getParameter(PARAM_MODE)).willReturn("getfile");
+        given(req.getParameter(PARAM_MODE)).willReturn("getinfo");
         given(req.getParameter(PARAM_PATH)).willReturn("/sample.txt");
         given(req.getMethod()).willReturn("GET");
         localFileManager.handleRequest(req, resp);
         writer.flush();
 
-        JsonElement jsonResult = parser.parse(cleanStringTime(new String(Files.readAllBytes(Paths.get(outputFilePath)))));
-        JsonElement jsonExpectation = parser.parse(cleanStringTime(new String(Files.readAllBytes(Paths.get(this.classLoader.getResource(EXPECTED_RESULT_GET_FILE_TXT_PATH).getFile())))));
+        JsonElement jsonResult = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(outputFilePath)))));
+        JsonElement jsonExpectation = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(this.classLoader.getResource(EXPECTED_RESULT_GET_FILE_TXT_PATH).getFile())))));
         assertEquals(jsonExpectation, jsonResult);
 
         // test sample image
@@ -174,8 +172,8 @@ public class LocalFileManagerTest {
         localFileManager.handleRequest(req, resp);
         writer.flush();
 
-        jsonResult = parser.parse(cleanStringTime(new String(Files.readAllBytes(Paths.get(outputFilePath)))));
-        jsonExpectation = parser.parse(cleanStringTime(new String(Files.readAllBytes(Paths.get(this.classLoader.getResource(EXPECTED_RESULT_GET_FILE_JPG_PATH).getFile())))));
+        jsonResult = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(outputFilePath)))));
+        jsonExpectation = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(this.classLoader.getResource(EXPECTED_RESULT_GET_FILE_JPG_PATH).getFile())))));
         assertEquals(jsonExpectation, jsonResult);
     }
 
@@ -205,14 +203,14 @@ public class LocalFileManagerTest {
 
         // test root folder
         given(resp.getWriter()).willReturn(writer);
-        given(req.getParameter(PARAM_MODE)).willReturn("getfolder");
+        given(req.getParameter(PARAM_MODE)).willReturn("readfolder");
         given(req.getParameter(PARAM_PATH)).willReturn("/");
         given(req.getMethod()).willReturn("GET");
         localFileManager.handleRequest(req, resp);
         writer.flush();
 
-        JsonElement jsonResult = parser.parse(cleanStringTime(new String(Files.readAllBytes(Paths.get(outputFilePath)))));
-        JsonElement jsonExpectation = parser.parse(cleanStringTime(new String(Files.readAllBytes(Paths.get(this.classLoader.getResource(EXPECTED_RESULT_GET_FOLDER_ROOT_PATH).getFile())))));
+        JsonElement jsonResult = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(outputFilePath)))));
+        JsonElement jsonExpectation = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(this.classLoader.getResource(EXPECTED_RESULT_GET_FOLDER_ROOT_PATH).getFile())))));
         assertEquals(jsonExpectation, jsonResult);
 
         // test empty folder
@@ -223,8 +221,8 @@ public class LocalFileManagerTest {
         localFileManager.handleRequest(req, resp);
         writer.flush();
 
-        jsonResult = parser.parse(cleanStringTime(new String(Files.readAllBytes(Paths.get(outputFilePath)))));
-        jsonExpectation = parser.parse(cleanStringTime(new String(Files.readAllBytes(Paths.get(this.classLoader.getResource(EXPECTED_RESULT_GET_FOLDER_EMPTY_PATH).getFile())))));
+        jsonResult = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(outputFilePath)))));
+        jsonExpectation = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(this.classLoader.getResource(EXPECTED_RESULT_GET_FOLDER_EMPTY_PATH).getFile())))));
         assertEquals(jsonExpectation, jsonResult);
 
         // test folder with files
@@ -236,8 +234,8 @@ public class LocalFileManagerTest {
         writer.flush();
 
         JsonParser parser = new JsonParser();
-        jsonExpectation = parser.parse(cleanStringTime(new String(Files.readAllBytes(Paths.get(outputFilePath)))));
-        jsonResult = parser.parse(cleanStringTime(new String(Files.readAllBytes(Paths.get(this.classLoader.getResource(EXPECTED_RESULT_GET_FOLDER_FILES_PATH).getFile())))));
+        jsonExpectation = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(outputFilePath)))));
+        jsonResult = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(this.classLoader.getResource(EXPECTED_RESULT_GET_FOLDER_FILES_PATH).getFile())))));
         assertEquals(jsonExpectation, jsonResult);
     }
 
@@ -519,22 +517,24 @@ public class LocalFileManagerTest {
 
     /**
      * @param json A JSON API String response
-     * @return The String without timestamp/created/modified values
+     * @return The String without path/created/modified values
      */
-    private String cleanStringTime(String json) throws IOException {
-        Pattern p1 = Pattern.compile("(timestamp\":)\\d+");
-        Pattern p2 = Pattern.compile("(created\":\")[0-9A-Za-z-: ]+(\")");
-        Pattern p3 = Pattern.compile("(modified\":\")[0-9A-Za-z-: ]+(\")");
+    private String cleanJsonApiResponse(String json) throws IOException {
+
+        Pattern p1 = Pattern.compile("(created\":)\\d+");
+        Pattern p2 = Pattern.compile("(modified\":)\\d+");
+        Pattern p3 = Pattern.compile("(path\":\")[0-9A-Za-z-:.\\/ ]+(\")");
 
         String output = "";
+
         Matcher m1 = p1.matcher(json);
         if (m1.find()) {
-            output = m1.replaceAll("$1 0");  // number 46
+            output = m1.replaceAll("$10");
         }
 
         Matcher m2 = p2.matcher(output);
         if (m2.find()) {
-            output = m2.replaceAll("$1$2");  // number 46
+            output = m2.replaceAll("$10");
         }
 
         Matcher m3 = p3.matcher(output);
@@ -544,4 +544,5 @@ public class LocalFileManagerTest {
 
         return output;
     }
+
 }

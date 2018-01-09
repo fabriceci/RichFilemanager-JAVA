@@ -162,8 +162,8 @@ public class LocalFileManager extends AbstractFileManager {
                     }
                 }
             }
-            fileAttributes.setWidth(dim.getWidth());
-            fileAttributes.setHeight(dim.getHeight());
+            fileAttributes.setWidth((int)dim.getWidth());
+            fileAttributes.setHeight((int)dim.getHeight());
         }
 
         fileAttributes.setName(filename);

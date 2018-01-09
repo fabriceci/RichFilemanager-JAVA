@@ -8,8 +8,8 @@ public class FileAttributes {
     private int writable = 1;
     private Long created;
     private Long modified;
-    private Double height;
-    private Double width;
+    private Integer height;
+    private Integer width;
     private Long size;
     private String content;
     private Long files;
@@ -64,19 +64,19 @@ public class FileAttributes {
         this.size = size;
     }
 
-    public Double getHeight() {
+    public Integer getHeight() {
         return height;
     }
 
-    public void setHeight(Double height) {
+    public void setHeight(Integer height) {
         this.height = height;
     }
 
-    public Double getWidth() {
+    public Integer getWidth() {
         return width;
     }
 
-    public void setWidth(Double width) {
+    public void setWidth(Integer width) {
         this.width = width;
     }
 
