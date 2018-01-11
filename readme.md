@@ -68,7 +68,7 @@ public class AdminFileManagerController {
 
 #### configuration
 
-There is two way to override the configuration. Please read the filemanager.config.default.properties to have more information.
+There are two ways to override the configuration. Please read the filemanager.config.default.properties to have more information.
 
 ##### Add a file property
 
