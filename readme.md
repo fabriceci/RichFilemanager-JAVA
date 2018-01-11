@@ -1,12 +1,12 @@
 # Java connector for RFM plugin
 
 *This is a (quick) conversion of the RFM PHP connector tested with Spring MVC.
-The code is not finished yet (need testing, refactoring) but it works.*
+ The code needs testing and a big refactoring, but it can be already used.*
 
 Requirement:
 
 * Servlet 3.1+ API.
-* Java 8
+* Java 7+
 
 ## Installation
 
@@ -24,6 +24,8 @@ Requirement:
 
 #### Set the previewUrl to false (filemanager.config.js)
 
+We will use the connector to show images
+
 ```
 "viewer": {
   ...
@@ -33,6 +35,8 @@ Requirement:
 ```
 
 #### Set the base Url in the initialisation of the connector
+
+The path where your RFM JS plugin is located
 
 ```
 $('.fm-container').richFilemanager({
@@ -51,8 +55,8 @@ public class AdminFileManagerController {
 
     @RequestMapping(value = "", method = RequestMethod.GET)
     public String index(ModelMap model, HttpServletRequest request, HttpServletResponse response) throws IOException {
-        // content of the index.html provided
-        return "admin/fm/home";
+        //content of the index.html in the (JS) plugin's folder
+        return "admin/rfm/home";
     }
 
     @RequestMapping(value = "/api")
@@ -78,9 +82,7 @@ You can pass a property Map into the constructor:
 @RequestMapping(value = "fm/api")
 public void fm(ModelMap model, HttpServletRequest request, HttpServletResponse response) throws IOException, FileManagerException {
         Map<String,String> options = new HashMap<>();
-        if(YourUtils.isSuperAdmin()){
-            options.put("propertyName", "value");
-        }
+        options.put("propertyName", "value");
         new LocalFileManager(options).handleRequest(request, response);
 }
 ```
