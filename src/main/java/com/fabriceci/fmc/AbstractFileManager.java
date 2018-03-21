@@ -100,7 +100,7 @@ public abstract class AbstractFileManager implements IFileManager {
                 return;
             }
 
-            if (method.equals("GET")) {
+            if (method.equals("GET") || method.equals("HEAD")) {
                 switch (mode) {
                     default:
                         throw new FileManagerException(ClientErrorMessage.MODE_ERROR);
@@ -169,7 +169,7 @@ public abstract class AbstractFileManager implements IFileManager {
                         break;
                     case "readfile" :
                         if (!StringUtils.isEmpty(pathParam)) {
-                            responseData = actionReadFile(response, pathParam);
+                            responseData = actionReadFile(request, response, pathParam);
                         }
                         break;
                     case "summarize" :
@@ -314,7 +314,7 @@ public abstract class AbstractFileManager implements IFileManager {
     }
 
     @Override
-    public FileData actionReadFile(HttpServletResponse response, String path) throws FileManagerException {
+    public FileData actionReadFile(HttpServletRequest request, HttpServletResponse response, String path) throws FileManagerException {
         throw new UnsupportedOperationException();
     }
 

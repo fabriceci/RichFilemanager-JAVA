@@ -1,6 +1,7 @@
 package com.fabriceci.fmc.impl;
 
 import com.fabriceci.fmc.AbstractFileManager;
+import com.fabriceci.fmc.MultipartFileSender;
 import com.fabriceci.fmc.error.ClientErrorMessage;
 import com.fabriceci.fmc.error.FMInitializationException;
 import com.fabriceci.fmc.error.FileManagerException;
@@ -419,7 +420,7 @@ public class LocalFileManager extends AbstractFileManager {
 
 
     @Override
-    public FileData actionReadFile(HttpServletResponse response, String path) throws FileManagerException {
+    public FileData actionReadFile(HttpServletRequest request, HttpServletResponse response, String path) throws FileManagerException {
 
         File file = getFile(path);
 
@@ -431,23 +432,15 @@ public class LocalFileManager extends AbstractFileManager {
             throw new FileManagerException(ClientErrorMessage.FORBIDDEN_ACTION_DIR);
         }
 
-        String filename = file.getName();
-        String fileExt = filename.substring(filename.lastIndexOf(".") + 1);
-        String mimeType = FileManagerUtils.getMimeTypeByExt(fileExt);
-        long fileSize = file.length();
-
-        //TO DO : IMPLEMENT HTTP RANGE FOR STREAM FILE (AUDIO/VIDEO)
-
-        response.setContentType(mimeType);
-        response.setHeader("Content-Length", Long.toString(fileSize));
-        response.setHeader("Content-Transfer-Encoding", "binary");
-        response.setHeader("Content-Disposition", "inline; filename=\"" + filename + "\"");
-
-        try {
-            FileUtils.copy(new BufferedInputStream(new FileInputStream(file)), response.getOutputStream());
-        } catch (IOException e) {
+        try{
+            MultipartFileSender.fromPath(file.toPath())
+                    .with(request)
+                    .with(response)
+                    .serveResource();
+        } catch (Exception e) {
             throw new FileManagerException(ClientErrorMessage.ERROR_SERVER);
         }
+
         return null;
     }
 

@@ -36,7 +36,7 @@ public interface IFileManager {
 
     FileData actionRename(String sourcePath, String targetPath) throws FileManagerException;
 
-    FileData actionReadFile(HttpServletResponse response, String path) throws FileManagerException;
+    FileData actionReadFile(HttpServletRequest request, HttpServletResponse response, String path) throws FileManagerException;
 
     FileData actionSummarize() throws FileManagerException;
 
