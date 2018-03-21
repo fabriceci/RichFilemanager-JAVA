@@ -1,12 +1,11 @@
 # Java connector for RFM plugin
 
-*This is a (quick) conversion of the RFM PHP connector tested with Spring MVC.
- The code needs testing and a big refactoring, but it can be already used.*
+*This is a (quick) conversion of the RFM PHP connector tested with Spring MVC. The code needs to be refactored and fully unit tested, but it can be already used.*
 
 Requirement:
 
 * Servlet 3.1+ API.
-* Java 7+
+* Java >= 7
 
 ## Installation
 
@@ -68,11 +67,11 @@ public class AdminFileManagerController {
 
 #### configuration
 
-There are two ways to override the configuration. Please read the filemanager.config.default.properties to have more information.
+There are two ways to override the configuration. Please read the [filemanager.config.default.properties](https://github.com/fabriceci/RichFilemanager-JAVA/blob/master/src/main/resources/filemanager.config.default.properties) to have more information.
 
 ##### Add a file property
 
-Add to your resources folder the file: filemanager.config.properties to override the default configuration
+Add to your resources folder the file: [filemanager.config.default.properties](https://github.com/fabriceci/RichFilemanager-JAVA/blob/master/src/main/resources/filemanager.config.default.properties) to override the default configuration
 
 ##### Override during runtime.
 
