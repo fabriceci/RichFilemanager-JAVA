@@ -11,29 +11,6 @@ public class ZipUtils {
 
     private static final int BUFFER_SIZE = 4096;
 
-    /* unzip
-
-      public static void main(String[] args) throws IOException {
-        String fileZip = "compressed.zip";
-        byte[] buffer = new byte[1024];
-        ZipInputStream zis = new ZipInputStream(new FileInputStream(fileZip));
-        ZipEntry zipEntry = zis.getNextEntry();
-        while(zipEntry != null){
-            String fileName = zipEntry.getName();
-            File newFile = new File("unzipTest/" + fileName);
-            FileOutputStream fos = new FileOutputStream(newFile);
-            int len;
-            while ((len = zis.read(buffer)) > 0) {
-                fos.write(buffer, 0, len);
-            }
-            fos.close();
-            zipEntry = zis.getNextEntry();
-        }
-        zis.closeEntry();
-        zis.close();
-    }
-     */
-
     static public byte[] zipFolder(File dir) throws IOException {
 
         ZipOutputStream zout = null;
@@ -41,7 +18,6 @@ public class ZipUtils {
 
         try {
             zout = new ZipOutputStream(bout);
-            // addFolderToZip("", dir, zout);
             zipFile(dir, dir.getName(), zout);
             zout.close();
             return bout.toByteArray();
@@ -77,41 +53,4 @@ public class ZipUtils {
         }
         fis.close();
     }
-
-    /*
-    static private void addFileToZip(String path, String srcFile, ZipOutputStream zout) throws IOException {
-
-        File folder = new File(srcFile);
-        if (folder.isDirectory()) {
-            addFolderToZip(path, folder, zout);
-        } else {
-            byte[] buf = new byte[BUFFER_SIZE];
-            int len;
-            FileInputStream in = null;
-            try {
-                in = new FileInputStream(srcFile);
-                zout.putNextEntry(new ZipEntry(path + "/" + folder.getName()));
-                while ((len = in.read(buf)) > 0) {
-                    zout.write(buf, 0, len);
-                }
-            } finally {
-                if(zout != null) zout.closeEntry();
-                if(in != null) in.close();
-            }
-
-        }
-    }
-
-    static private void addFolderToZip(String path, File folder, ZipOutputStream zout) throws IOException {
-        if( folder != null && folder.list() != null) {
-            for (String fileName : folder.list()) {
-                if (path.equals("")) {
-                    addFileToZip(folder.getName(), folder.getPath() + "/" + fileName, zout);
-                } else {
-                    addFileToZip(path + "/" + folder.getName(), folder.getPath() + "/" + fileName, zout);
-                }
-            }
-        }
-    }
-    */
 }

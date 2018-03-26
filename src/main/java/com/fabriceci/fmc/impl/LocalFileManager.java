@@ -18,6 +18,7 @@ import javax.servlet.http.Part;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.net.URLEncoder;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
@@ -363,12 +364,7 @@ public class LocalFileManager extends AbstractFileManager {
         }
         return null;
     }
-
-
-    /**
-     * NEED TEST
-     */
-
+    
     @Override
     public FileData actionRename(String sourcePath, String targetName) throws FileManagerException {
 
@@ -502,7 +498,12 @@ public class LocalFileManager extends AbstractFileManager {
             response.setHeader("Expires", "0");
             response.setHeader("Cache-Control", "must-revalidate, post-check=0, pre-check=0");
 
+            boolean charsLatinOnly = Boolean.parseBoolean(propertiesConfig.getProperty("charsLatinOnly"));
+
             if (file.isFile()) {
+                if(!charsLatinOnly){
+                    filename = URLEncoder.encode(filename, "UTF-8");
+                }
                 String fileExt = filename.substring(filename.lastIndexOf(".") + 1);
                 String mimeType = (!StringUtils.isEmpty(FileManagerUtils.mimetypes.get(fileExt))) ? FileManagerUtils.mimetypes.get(fileExt) : "application/octet-stream";
                 response.setContentLength((int) file.length());
@@ -519,6 +520,9 @@ public class LocalFileManager extends AbstractFileManager {
                 }
 
                 String zipFileName = FileUtils.getBaseName(path.substring(0, path.length() - 1)) + ".zip";
+                if(!charsLatinOnly){
+                    zipFileName = URLEncoder.encode(zipFileName, "UTF-8");
+                }
                 String mimType = FileManagerUtils.mimetypes.get("zip");
                 response.setContentType(mimType);
                 response.setHeader("Content-Disposition", "attachment; filename=\"" + zipFileName + "\"");
