@@ -4,7 +4,7 @@
 
 Requirement:
 
-* Servlet 3.1+ API.
+* Servlet API >= 3.1+
 * Java >= 7
 
 ## Installation

@@ -373,13 +373,21 @@ public class LocalFileManager extends AbstractFileManager {
     public FileData actionRename(String sourcePath, String targetName) throws FileManagerException {
 
         File sourceFile = getFile(sourcePath);
+        String targetDirPath, targetPath;
 
-        int pathPos = sourcePath.lastIndexOf("/");
-        String targetDirPath = sourcePath.substring(0, pathPos + 1);
+        // check if client inconsistency
+        if(sourceFile.isDirectory() && !sourcePath.endsWith("/")){
+            throw new FileManagerException(ClientErrorMessage.NOT_ALLOWED);
+        }
+
+        // remove the last slash if directory
+        if(sourceFile.isDirectory()) {
+            sourcePath = sourcePath.substring(0, sourcePath.length() - 1);
+        }
+        targetDirPath = sourcePath.substring(0, sourcePath.lastIndexOf("/") + 1);
+        targetPath = targetDirPath + targetName + (sourceFile.isDirectory() ? "/" : "");
+
         File targetDir = getFile(targetDirPath);
-
-        String targetPath = targetDirPath + targetName;
-
         File targetFile = getFile(targetPath);
 
         // forbid to change path during rename
