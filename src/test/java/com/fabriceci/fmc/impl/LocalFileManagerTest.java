@@ -22,6 +22,7 @@ import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLDecoder;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -75,9 +76,8 @@ public class LocalFileManagerTest {
     @Before
     public void initialize() throws FMInitializationException, IOException {
         classLoader = getClass().getClassLoader();
-        sampleImageFile = new File(classLoader.getResource(SAMPLE_IMAGE_PATH).getFile());
-        sampleTxtFile = new File(classLoader.getResource(SAMPLE_TXT_PATH).getFile());
-
+        sampleImageFile = new File(URLDecoder.decode(classLoader.getResource(SAMPLE_IMAGE_PATH).getFile(), "utf-8"));
+        sampleTxtFile = new File(URLDecoder.decode(classLoader.getResource(SAMPLE_TXT_PATH).getFile(), "utf-8"));
         outputFilePath = temporaryOuputFolder.getRoot().getAbsolutePath() + "/" + PRINT_FILE_NAME;
 
         parser = new JsonParser();
@@ -132,7 +132,7 @@ public class LocalFileManagerTest {
         writer.flush();
 
         JsonElement actual = parser.parse(new String(Files.readAllBytes(Paths.get(outputFilePath))));
-        JsonElement jsonExpectation = parser.parse(new String(Files.readAllBytes(Paths.get(this.classLoader.getResource(EXPECTED_RESULT_GET_INITIATE).getFile()))));
+        JsonElement jsonExpectation = parser.parse(new String(Files.readAllBytes(Paths.get(URLDecoder.decode(this.classLoader.getResource(EXPECTED_RESULT_GET_INITIATE).getFile(), "utf-8")))));
         assertEquals(jsonExpectation, actual);
     }
 
@@ -162,7 +162,7 @@ public class LocalFileManagerTest {
         writer.flush();
 
         JsonElement jsonResult = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(outputFilePath)))));
-        JsonElement jsonExpectation = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(this.classLoader.getResource(EXPECTED_RESULT_GET_FILE_TXT_PATH).getFile())))));
+        JsonElement jsonExpectation = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(URLDecoder.decode(this.classLoader.getResource(EXPECTED_RESULT_GET_FILE_TXT_PATH).getFile(), "utf-8"))))));
         assertEquals(jsonExpectation, jsonResult);
 
         // test sample image
@@ -173,7 +173,7 @@ public class LocalFileManagerTest {
         writer.flush();
 
         jsonResult = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(outputFilePath)))));
-        jsonExpectation = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(this.classLoader.getResource(EXPECTED_RESULT_GET_FILE_JPG_PATH).getFile())))));
+        jsonExpectation = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(URLDecoder.decode(this.classLoader.getResource(EXPECTED_RESULT_GET_FILE_JPG_PATH).getFile(), "utf-8"))))));
         assertEquals(jsonExpectation, jsonResult);
     }
 
@@ -210,7 +210,7 @@ public class LocalFileManagerTest {
         writer.flush();
 
         JsonElement jsonResult = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(outputFilePath)))));
-        JsonElement jsonExpectation = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(this.classLoader.getResource(EXPECTED_RESULT_GET_FOLDER_ROOT_PATH).getFile())))));
+        JsonElement jsonExpectation = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(URLDecoder.decode(this.classLoader.getResource(EXPECTED_RESULT_GET_FOLDER_ROOT_PATH).getFile(), "utf-8"))))));
         assertEquals(jsonExpectation, jsonResult);
 
         // test empty folder
@@ -222,7 +222,7 @@ public class LocalFileManagerTest {
         writer.flush();
 
         jsonResult = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(outputFilePath)))));
-        jsonExpectation = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(this.classLoader.getResource(EXPECTED_RESULT_GET_FOLDER_EMPTY_PATH).getFile())))));
+        jsonExpectation = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(URLDecoder.decode(this.classLoader.getResource(EXPECTED_RESULT_GET_FOLDER_EMPTY_PATH).getFile(), "utf-8"))))));
         assertEquals(jsonExpectation, jsonResult);
 
         // test folder with files
@@ -235,7 +235,7 @@ public class LocalFileManagerTest {
 
         JsonParser parser = new JsonParser();
         jsonExpectation = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(outputFilePath)))));
-        jsonResult = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(this.classLoader.getResource(EXPECTED_RESULT_GET_FOLDER_FILES_PATH).getFile())))));
+        jsonResult = parser.parse(cleanJsonApiResponse(new String(Files.readAllBytes(Paths.get(URLDecoder.decode(this.classLoader.getResource(EXPECTED_RESULT_GET_FOLDER_FILES_PATH).getFile(), "utf-8"))))));
         assertEquals(jsonExpectation, jsonResult);
     }
 
