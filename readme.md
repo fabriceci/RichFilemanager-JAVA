@@ -1,15 +1,15 @@
 # Java connector for RFM plugin
 
-*This is a (quick) conversion of the RFM PHP connector tested with Spring MVC. The code needs to be refactored and fully unit tested, but it can be already used.*
+_This is a (quick) conversion of the RFM PHP connector tested with Spring MVC. The code needs to be refactored and fully unit tested, but it can be already used._
 
 Requirement:
 
-* Servlet API >= 3.1+
-* Java >= 7
+- Servlet API >= 3.1+
+- Java >= 7
 
 ## Installation
 
-### JS part
+### JS plugin configuration
 
 #### Set the connectorUrl (filemanager.config.js)
 
@@ -45,6 +45,24 @@ $('.fm-container').richFilemanager({
 
 ### Java part
 
+### Add the repository as dependecy
+
+The easiest way to do that is to use [JitPack.io](https://github.com/jitpack/jitpack.io)
+
+Here is an example with Gradle (there a maven example available in the JitPack repository)
+
+```
+    allprojects {
+        repositories {
+            jcenter()
+            maven { url "https://jitpack.io" }
+        }
+   }
+   dependencies {
+        implementation 'com.github.fabriceci:RichFilemanager-JAVA:master-SNAPSHOT'
+   }
+```
+
 #### (Spring MVC) Create a controller to handle the manager
 
 ```
@@ -65,15 +83,15 @@ public class AdminFileManagerController {
 }
 ```
 
-#### configuration
+## configuration
 
 There are two ways to override the configuration. Please read the [filemanager.config.default.properties](https://github.com/fabriceci/RichFilemanager-JAVA/blob/master/src/main/resources/filemanager.config.default.properties) to have more information.
 
-##### Add a file property
+### Add a file property
 
 Add to your resources folder the file: [filemanager.config.default.properties](https://github.com/fabriceci/RichFilemanager-JAVA/blob/master/src/main/resources/filemanager.config.default.properties) to override the default configuration
 
-##### Override during runtime.
+### Override during runtime
 
 You can pass a property Map into the constructor:
 
@@ -86,8 +104,8 @@ public void fm(ModelMap model, HttpServletRequest request, HttpServletResponse r
 }
 ```
 
-#### Note
+## Note
 
 It's optional, but I **strongly recommend** to add the [twelvemonkeys library](https://github.com/haraldk/TwelveMonkeys) to avoid errors during thumbnail generations.
 
-`compile('com.twelvemonkeys.imageio:imageio-jpeg:3.3.2');`
+`compile('com.twelvemonkeys.imageio:imageio-jpeg:3.3.+');`
