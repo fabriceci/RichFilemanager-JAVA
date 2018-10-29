@@ -59,7 +59,7 @@ Here is an example with Gradle (there a maven example available in the JitPack r
         }
    }
    dependencies {
-        implementation 'com.github.fabriceci:RichFilemanager-JAVA:master-SNAPSHOT'
+        compile 'com.github.fabriceci:RichFilemanager-JAVA:master-SNAPSHOT'
    }
 ```
 
