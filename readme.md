@@ -9,7 +9,7 @@ Requirement:
 
 ## Installation
 
-### JS plugin configuration
+### Plugin configuration (JavaScript side)
 
 #### Set the connectorUrl (filemanager.config.js)
 
@@ -43,9 +43,9 @@ $('.fm-container').richFilemanager({
 });
 ```
 
-### Java part
+### Java side
 
-### Add the repository as dependecy
+#### Add the repository as dependecy
 
 The easiest way to do that is to use [JitPack.io](https://github.com/jitpack/jitpack.io)
 
