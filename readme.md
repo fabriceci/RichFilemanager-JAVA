@@ -7,6 +7,10 @@ Requirement:
 - Servlet API >= 3.1+
 - Java >= 7
 
+## Demo project
+
+[Example with Spring MVC](https://github.com/fabriceci/RichFilemanager-JAVA-demo-Spring)
+
 ## Installation
 
 ### Plugin configuration (JavaScript side)
